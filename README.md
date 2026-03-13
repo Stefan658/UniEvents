@@ -28,3 +28,18 @@ Platformă web pentru managementul evenimentelor universitare din cadrul USV.
 
 ```bash
 docker compose up --build
+
+## API-uri
+
+GET /api/health
+GET /api/events
+GET /api/events/:id
+POST /api/auth/student/google
+POST /api/auth/organizer/login
+POST /api/auth/admin/login
+POST /api/events
+PUT /api/events/:id
+DELETE /api/events/:id
+GET /api/categories
+POST /api/feedback
+GET /api/reports/summary
