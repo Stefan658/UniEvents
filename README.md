@@ -34,13 +34,6 @@ docker compose up --build
 
 ## API-uri  
 
-=======
-
-```
-
-
-## API-uri  
->>>>>>> 33e513c (Updated Structure)
   
 ### Sistem  
 GET /api/health  
