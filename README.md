@@ -28,12 +28,20 @@ Platformă web pentru managementul evenimentelor universitare din cadrul USV.
 
 ```bash
 docker compose up --build
+<<<<<<< HEAD
 ```
 
 
 
 ## API-uri  
 
+=======
+
+```
+
+
+## API-uri  
+>>>>>>> 33e513c (Updated Structure)
   
 ### Sistem  
 GET /api/health  
