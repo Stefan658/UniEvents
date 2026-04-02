@@ -28,7 +28,6 @@ Platformă web pentru managementul evenimentelor universitare din cadrul USV.
 
 ```bash
 docker compose up --build
-<<<<<<< HEAD
 ```
 
 
