@@ -26,6 +26,6 @@ class Event(db.Model):
     # Relationships
     organizer = db.relationship("User", back_populates="organized_events")
     category = db.relationship("Category", back_populates="events")
-    registrations = db.relationship("Registration", back_populates="event", cascade="all, delete-orphan")
-    feedback_entries = db.relationship("Feedback", back_populates="event", cascade="all, delete-orphan")
-    materials = db.relationship("Material", back_populates="event", cascade="all, delete-orphan")
+    registrations = db.relationship("Registration", back_populates="event", cascade="all, delete-orphan", passive_deletes=True)
+    feedback_entries = db.relationship("Feedback", back_populates="event", cascade="all, delete-orphan", passive_deletes=True)
+    materials = db.relationship("Material", back_populates="event", cascade="all, delete-orphan", passive_deletes=True)

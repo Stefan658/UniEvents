@@ -6,7 +6,7 @@ class Feedback(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    event_id = db.Column(db.Integer, db.ForeignKey("events.id"), nullable=False)
+    event_id = db.Column(db.Integer, db.ForeignKey("events.id", ondelete='CASCADE'), nullable=False)
     rating = db.Column(db.Integer, nullable=False)
     comment = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
@@ -16,6 +16,7 @@ class Feedback(db.Model):
         db.UniqueConstraint("user_id", "event_id", name="uq_user_event_feedback"),
     )
 
-    # Relationships
+   # Relationships
     user = db.relationship("User", back_populates="feedback_entries")
+    # Relația cu Event este definită în Event.feedback_entries
     event = db.relationship("Event", back_populates="feedback_entries")

@@ -17,10 +17,43 @@ build/
 
 # VS Code
 .vscode/
+.idea/
+
+# Logs
+*.log
 
 # OS
 .DS_Store
 Thumbs.db/
 
-# Env
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment variables
 .env
+.env.*
+!.env.example
+
+# Build / coverage / test
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.mypy_cache/
+
+# Migrations cache
+*.sqlite3
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+
+# Docker local overrides
+docker-compose.override.yml
+
+# Misc
+*.swp
+*.swo

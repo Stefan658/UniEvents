@@ -3,13 +3,27 @@ from flask_cors import CORS
 
 from backend.app.config import Config
 from backend.app.extensions import db, migrate
-from backend.app.routes import health_bp, categories_bp, events_bp
+from backend.app.routes import (
+    health_bp,
+    categories_bp,
+    events_bp,
+    feedback_bp,
+    auth_bp,
+    reports_bp,
+    registration_bp,
+    material_bp,
+    users_bp,
+)
 
 
 def create_app(config_class=Config):
     """Initialize the core application."""
     app = Flask(__name__)
     app.config.from_object(config_class)
+
+    # Asigurăm existența unui SECRET_KEY pentru a evita crăparea generării JWT
+    if not app.config.get('SECRET_KEY'):
+        app.config['SECRET_KEY'] = 'dev-fallback-secret-key'
 
     # Initialize Flask extensions
     CORS(app)
@@ -30,5 +44,11 @@ def create_app(config_class=Config):
     app.register_blueprint(health_bp)
     app.register_blueprint(categories_bp)
     app.register_blueprint(events_bp)
+    app.register_blueprint(feedback_bp)
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(reports_bp)
+    app.register_blueprint(registration_bp)
+    app.register_blueprint(material_bp)
+    app.register_blueprint(users_bp)
 
     return app

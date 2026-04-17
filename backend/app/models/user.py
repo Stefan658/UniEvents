@@ -12,8 +12,11 @@ class User(db.Model):
     role_id = db.Column(db.Integer, db.ForeignKey("roles.id"), nullable=False)
 
     # Relationships (back-populated from other models)
+    role = db.relationship("Role", back_populates="users")
     organized_events = db.relationship("Event", back_populates="organizer")
     registrations = db.relationship("Registration", back_populates="user")
+    feedback_entries = db.relationship("Feedback", back_populates="user")
+    uploaded_materials = db.relationship("Material", back_populates="uploader")
 
     @property
     def full_name(self):

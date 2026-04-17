@@ -6,7 +6,7 @@ class Registration(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    event_id = db.Column(db.Integer, db.ForeignKey("events.id"), nullable=False)
+    event_id = db.Column(db.Integer, db.ForeignKey("events.id", ondelete='CASCADE'), nullable=False)
     status = db.Column(db.String(20), nullable=False)
     registered_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     check_in_at = db.Column(db.DateTime, nullable=True)

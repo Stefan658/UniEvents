@@ -8,4 +8,4 @@ class Role(db.Model):
     name = db.Column(db.String(50), nullable=False, unique=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
-    users = db.relationship("User", back_populates="role")
+    users = db.relationship("User", back_populates="role", lazy=True)
