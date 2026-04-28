@@ -24,23 +24,20 @@ def users_general_route():
         try:
             users = user_service.get_all_users()
             return jsonify([_serialize_user(user) for user in users]), 200
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            return jsonify({"error": "A apărut o eroare internă a serverului.", "details": str(e)}), 500
+        except Exception: # Changed message, removed traceback and details
+            return jsonify({"error": "An internal server error occurred."}), 500
 
     if request.method == "POST":
         data = request.get_json()
         if not data:
-            return jsonify({"error": "Format JSON invalid sau date lipsă."}), 400
-
-        try:
-            new_user = user_service.create_user(data)
+            return jsonify({"error": "Invalid JSON format or missing data."}), 400 # Changed message
+        try: # This can raise ValueError with Romanian messages from user_service.py
+            new_user = user_service.create_user(data) 
             return jsonify(_serialize_user(new_user)), 201
-        except ValueError as e:
-            return jsonify({"error": str(e)}), 400
-        except Exception as e:
-            return jsonify({"error": "A apărut o eroare internă a serverului.", "details": str(e)}), 500
+        except ValueError: # Changed message
+            return jsonify({"error": "Invalid input data."}), 400
+        except Exception: # Changed message, removed details
+            return jsonify({"error": "An internal server error occurred."}), 500
 
 
 @users_bp.route("/api/users/<int:user_id>", methods=["GET"])
@@ -48,11 +45,11 @@ def get_user_route(user_id):
     """Retrieves a single user by their ID."""
     try:
         user = user_service.get_user_by_id(user_id)
-        if not user:
-            return jsonify({"error": "User not found"}), 404
+        if not user: # Changed message
+            return jsonify({"error": "User not found."}), 404
         return jsonify(_serialize_user(user)), 200
-    except Exception:
-        return jsonify({"error": "An internal server error occurred"}), 500
+    except Exception: # Changed message
+        return jsonify({"error": "An internal server error occurred."}), 500
 
 
 @users_bp.route("/api/users/<int:user_id>", methods=["PUT"])
@@ -60,37 +57,32 @@ def update_user_route(user_id):
     """Updates an existing user's information."""
     data = request.get_json()
     if not data:
-        return jsonify({"error": "Payload-ul JSON este invalid sau lipsește."}), 400
+        return jsonify({"error": "Invalid JSON payload."}), 400 # Changed message
+    try: # This can raise ValueError with Romanian messages from user_service.py
+        updated_user = user_service.update_user(user_id, data) 
 
-    try:
-        updated_user = user_service.update_user(user_id, data)
-
-        if updated_user is None:
-            return jsonify({"error": "User not found"}), 404
+        if updated_user is None: # Changed message
+            return jsonify({"error": "User not found."}), 404
 
         return jsonify(_serialize_user(updated_user)), 200
 
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": "A apărut o eroare internă a serverului.", "details": str(e)}), 500
+    except ValueError: # Changed message
+        return jsonify({"error": "Invalid input data."}), 400
+    except Exception: # Changed message, removed traceback and details
+        return jsonify({"error": "An internal server error occurred."}), 500
 
 
 @users_bp.route("/api/users/<int:user_id>", methods=["DELETE"])
 def delete_user_route(user_id):
     """Deletes a user by their ID."""
     try:
-        success = user_service.delete_user(user_id)
-        if not success:
-            return jsonify({"error": "User not found"}), 404
+        success = user_service.delete_user(user_id) # Changed message
+        if not success: # Changed message
+            return jsonify({"error": "User not found."}), 404
         
-        return jsonify({"message": "User deleted successfully."}), 200
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": "An internal server error occurred", "details": str(e)}), 500
+        return jsonify({"message": "User deleted successfully."}), 200 # Changed message
+    except Exception: # Changed message, removed traceback and details
+        return jsonify({"error": "An internal server error occurred."}), 500
 
 
 @users_bp.route("/api/users/organizers", methods=["GET"])
@@ -99,22 +91,20 @@ def get_organizers_route():
     try:
         organizers = user_service.get_organizers()
         return jsonify([_serialize_user(user) for user in organizers]), 200
-    except Exception:
-        # In a production app, it's better to log the exception
-        return jsonify({"error": "An internal server error occurred"}), 500
+    except Exception: # Changed message, removed comment
+        return jsonify({"error": "An internal server error occurred."}), 500
 
 
 @users_bp.route("/api/users/organizers", methods=["POST"])
 def add_organizer():
-    """Endpoint pentru crearea unui nou utilizator cu rol de organizer."""
+    """Creates a new user with the 'organizer' role."""
     data = request.get_json()
     if not data:
-        return jsonify({"error": "Format JSON invalid sau date lipsă."}), 400
-
-    try:
-        new_organizer = user_service.create_organizer(data)
+        return jsonify({"error": "Invalid JSON format or missing data."}), 400 # Changed message
+    try: # This can raise ValueError with Romanian messages from user_service.py
+        new_organizer = user_service.create_organizer(data) 
         
-        # Construim răspunsul JSON fără expunerea parolei hash-uite
+        # Build the JSON response without exposing the hashed password
         response_data = {
             "id": new_organizer.id,
             "first_name": new_organizer.first_name,
@@ -127,10 +117,7 @@ def add_organizer():
         
         return jsonify(response_data), 201
 
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-    except Exception as e:
-        return jsonify({
-            "error": "A apărut o eroare internă a serverului.",
-            "details": str(e)
-        }), 500
+    except ValueError: # Changed message
+        return jsonify({"error": "Invalid input data."}), 400
+    except Exception: # Changed message, removed details
+        return jsonify({"error": "An internal server error occurred."}), 500

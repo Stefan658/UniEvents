@@ -82,7 +82,7 @@ def get_event(event_id):
         joinedload(Event.category), joinedload(Event.organizer)
     ).get(event_id)
     if not event:
-        return jsonify({"error": "Event not found"}), 404
+        return jsonify({"error": "Event not found."}), 404
     return jsonify(_serialize_event(event))
 
 
@@ -93,7 +93,7 @@ def get_event_materials(event_id):
         # First, check if the event exists to return a 404 if not.
         event = Event.query.get(event_id)
         if not event:
-            return jsonify({"error": "Event not found"}), 404
+            return jsonify({"error": "Event not found."}), 404
 
         # Query for materials related to the event, joining the uploader to get their name.
         materials = (
@@ -105,8 +105,7 @@ def get_event_materials(event_id):
 
         return jsonify([_serialize_material(m) for m in materials]), 200
     except Exception:
-        # In a real app, you should log the exception
-        return jsonify({"error": "An internal server error occurred"}), 500
+        return jsonify({"error": "An internal server error occurred."}), 500
 
 
 @events_bp.route("/api/events/calendar", methods=["GET"])
@@ -134,10 +133,9 @@ def get_calendar_events_route():
 
     except ValueError:
         # This catches errors from fromisoformat
-        return jsonify({"error": "Invalid date format for 'from' or 'to' parameters. Use ISO 8601 format."}), 400
+        return jsonify({"error": "Invalid date format. Use ISO 8601 format."}), 400
     except Exception:
-        # In a real app, you should log the exception
-        return jsonify({"error": "An internal server error occurred"}), 500
+        return jsonify({"error": "An internal server error occurred."}), 500
 
 
 
@@ -146,16 +144,15 @@ def create_event():
     """Creates a new event."""
     data = request.get_json()
     if not data:
-        return jsonify({"error": "Invalid JSON payload"}), 400
+        return jsonify({"error": "Invalid JSON payload."}), 400
 
     try:
         new_event = event_service.create_event(data)
         return jsonify(_serialize_event(new_event)), 201
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
+    except ValueError:
+        return jsonify({"error": "Invalid input data."}), 400
     except Exception:
-        # In a real app, you should log the exception
-        return jsonify({"error": "An internal server error occurred"}), 500
+        return jsonify({"error": "An internal server error occurred."}), 500
 
 
 @events_bp.route("/api/events/<int:event_id>", methods=["PUT"])
@@ -163,18 +160,18 @@ def update_event_route(event_id):
     """Updates an existing event."""
     data = request.get_json()
     if not data:
-        return jsonify({"error": "Invalid JSON payload"}), 400
+        return jsonify({"error": "Invalid JSON payload."}), 400
 
     try:
         updated_event = event_service.update_event(event_id, data)
         if not updated_event:
-            return jsonify({"error": "Event not found"}), 404
+            return jsonify({"error": "Event not found."}), 404
 
         return jsonify(_serialize_event(updated_event)), 200
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
+    except ValueError:
+        return jsonify({"error": "Invalid input data."}), 400
     except Exception:
-        return jsonify({"error": "An internal server error occurred"}), 500
+        return jsonify({"error": "An internal server error occurred."}), 500
 
 
 @events_bp.route("/api/events/<int:event_id>", methods=["DELETE"])
@@ -183,12 +180,11 @@ def delete_event_route(event_id):
     try:
         success = event_service.delete_event(event_id)
         if not success:
-            return jsonify({"error": "Event not found"}), 404
+            return jsonify({"error": "Event not found."}), 404
 
-        return jsonify({"message": "Event deleted successfully"}), 200
+        return jsonify({"message": "Event deleted successfully."}), 200
     except Exception:
-        # In a real app, you should log the exception
-        return jsonify({"error": "An internal server error occurred"}), 500
+        return jsonify({"error": "An internal server error occurred."}), 500
 
 
 @events_bp.route("/api/events/<int:event_id>/status", methods=["PUT"])
@@ -196,7 +192,7 @@ def update_event_status_route(event_id):
     """Updates the status of an existing event."""
     data = request.get_json()
     if not data:
-        return jsonify({"error": "Invalid JSON payload"}), 400
+        return jsonify({"error": "Invalid JSON payload."}), 400
 
     new_status = data.get("status")
     if not new_status:
@@ -205,14 +201,13 @@ def update_event_status_route(event_id):
     try:
         updated_event = event_service.update_event_status(event_id, new_status)
         if not updated_event:
-            return jsonify({"error": "Event not found"}), 404
+            return jsonify({"error": "Event not found."}), 404
 
         return jsonify(_serialize_event(updated_event)), 200
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
+    except ValueError:
+        return jsonify({"error": "Invalid input data."}), 400
     except Exception:
-        # In a real app, you should log the exception
-        return jsonify({"error": "An internal server error occurred"}), 500
+        return jsonify({"error": "An internal server error occurred."}), 500
 
 
 @events_bp.route("/api/events/search", methods=["GET"])
@@ -238,8 +233,7 @@ def search_events_route():
         # If no filters are provided, the service will return all events, which is demo-friendly.
         events = event_service.search_events(filters)
         return jsonify([_serialize_event(event) for event in events]), 200
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
+    except ValueError:
+        return jsonify({"error": "Invalid input data."}), 400
     except Exception:
-        # In a real app, you should log the exception
-        return jsonify({"error": "An internal server error occurred"}), 500
+        return jsonify({"error": "An internal server error occurred."}), 500

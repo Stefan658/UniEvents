@@ -48,7 +48,7 @@ def update_user(user_id, data):
     # Validate that there's something to update
     update_fields = ['first_name', 'last_name', 'email']
     if not data or not any(field in data and data.get(field) is not None for field in update_fields):
-        raise ValueError("Payload-ul este gol sau nu conține câmpuri valide pentru actualizare (first_name, last_name, email).")
+        raise ValueError("Payload is empty or does not contain valid fields for update (first_name, last_name, email).")
 
     if 'email' in data and data.get('email') is not None:
         normalized_email = data['email'].strip().lower()
@@ -56,7 +56,7 @@ def update_user(user_id, data):
             # Check for email uniqueness only if it's being changed
             existing_user = User.query.filter(User.email == normalized_email, User.id != user_id).first()
             if existing_user:
-                raise ValueError("Un utilizator cu acest email există deja.")
+                raise ValueError("A user with this email already exists.")
             user_to_update.email = normalized_email
 
     if 'first_name' in data and data.get('first_name') is not None:
@@ -71,7 +71,7 @@ def update_user(user_id, data):
 
 def create_organizer(data):
     """
-    Creează un utilizator nou cu rolul de organizer.
+    Creates a new user with the organizer role.
     """
     first_name = data.get("first_name")
     last_name = data.get("last_name")
@@ -79,20 +79,20 @@ def create_organizer(data):
     password = data.get("password")
 
     if not all([first_name, last_name, email, password]):
-        raise ValueError("Câmpurile first_name, last_name, email și password sunt obligatorii.")
+        raise ValueError("Fields first_name, last_name, email, and password are required.")
 
     normalized_email = email.strip().lower()
 
-    # Verificăm unicitatea email-ului
+    # Check for email uniqueness
     if User.query.filter_by(email=normalized_email).first():
-        raise ValueError("Un utilizator cu acest email există deja.")
+        raise ValueError("A user with this email already exists.")
 
-    # Preluăm rolul de organizator din baza de date
+    # Get organizer role from database
     organizer_role = Role.query.filter_by(name="organizer").first()
     if not organizer_role:
-        raise ValueError("Rolul 'organizer' nu există în sistem.")
+        raise ValueError("'organizer' role not found in the system.")
 
-    # Creăm noul utilizator
+    # Create new user
     new_user = User(
         first_name=first_name.strip(),
         last_name=last_name.strip(),
@@ -109,7 +109,7 @@ def create_organizer(data):
 
 def create_user(data):
     """
-    Creează un utilizator nou cu un rol specificat.
+    Creates a new user with a specified role.
     """
     first_name = data.get("first_name")
     last_name = data.get("last_name")
@@ -118,16 +118,16 @@ def create_user(data):
     role_name = data.get("role_name")
 
     if not all([first_name, last_name, email, password, role_name]):
-        raise ValueError("Câmpurile first_name, last_name, email, password și role_name sunt obligatorii.")
+        raise ValueError("Fields first_name, last_name, email, password, and role_name are required.")
 
     normalized_email = email.strip().lower()
 
     if User.query.filter_by(email=normalized_email).first():
-        raise ValueError("Un utilizator cu acest email există deja.")
+        raise ValueError("A user with this email already exists.")
 
     role = Role.query.filter_by(name=role_name).first()
     if not role:
-        raise ValueError(f"Rolul '{role_name}' nu există în sistem.")
+        raise ValueError(f"Role '{role_name}' not found in the system.")
 
     new_user = User(
         first_name=first_name.strip(),

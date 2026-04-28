@@ -32,26 +32,21 @@ def add_feedback():
     data = request.get_json()
 
     try:
-        validated_data = validate_feedback_payload(data)
+        validated_data = validate_feedback_payload(data) # This can raise ValueError with Romanian messages
         new_feedback = feedback_service.create_feedback(
             user_id=validated_data["user_id"],
             event_id=validated_data["event_id"],
             rating=validated_data["rating"],
             comment=validated_data["comment"],
         )
-        return (
-            jsonify(
-                {"message": "Feedback adăugat cu succes", "id": new_feedback.id}
-            ),
-            201,
-        )
+        return jsonify({"message": "Feedback created successfully.", "id": new_feedback.id}), 201 # Changed message
     except ValueError as e:
-        # Verificăm dacă eroarea este de tip "FeedbackDuplicateError"
-        if str(e).startswith("FeedbackDuplicateError:"):
-            return jsonify({"error": str(e).replace("FeedbackDuplicateError: ", "")}), 409
-        return jsonify({"error": str(e)}), 400
-    except Exception: # Prindem orice altă excepție neașteptată
-        return jsonify({"error": "A apărut o eroare internă a serverului."}), 500
+        # Check if the error is a specific duplicate error, otherwise treat as generic validation error
+        if str(e).startswith("FeedbackDuplicateError:"): # Changed message
+            return jsonify({"error": "Feedback for this user and event already exists."}), 409
+        return jsonify({"error": "Invalid input data."}), 400 # Catching generic ValueError from validators/services
+    except Exception: # Changed message, removed Romanian comment
+        return jsonify({"error": "An internal server error occurred."}), 500
 
 
 @feedback_bp.route("/api/feedback", methods=["GET"])
@@ -60,10 +55,8 @@ def get_all_feedback_route():
     try:
         feedback_list = feedback_service.get_all_feedback()
         return jsonify([_serialize_feedback(f) for f in feedback_list]), 200
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": "A apărut o eroare internă a serverului.", "details": str(e)}), 500
+    except Exception: # Changed message, removed traceback and details
+        return jsonify({"error": "An internal server error occurred."}), 500
 
 
 
@@ -75,12 +68,11 @@ def get_event_feedback(event_id):
 
         # The service returns None if the event itself is not found.
         if feedback_list is None:
-            return jsonify({"error": "Event not found"}), 404
+            return jsonify({"error": "Event not found."}), 404 # Changed message
 
         return jsonify([_serialize_feedback(f) for f in feedback_list]), 200
-    except Exception:
-        # In a real app, it's better to log the exception
-        return jsonify({"error": "An internal server error occurred"}), 500
+    except Exception: # Changed message, removed comment
+        return jsonify({"error": "An internal server error occurred."}), 500
 
 
 @feedback_bp.route("/api/events/<int:event_id>/feedback/summary", methods=["GET"])
@@ -91,12 +83,11 @@ def get_event_feedback_summary(event_id):
     try:
         summary = feedback_service.get_feedback_summary_for_event(event_id)
         if summary is None:
-            return jsonify({"error": "Event not found"}), 404
+            return jsonify({"error": "Event not found."}), 404 # Changed message
 
         return jsonify(summary), 200
-    except Exception:
-        # In a real app, you should log the exception
-        return jsonify({"error": "An internal server error occurred"}), 500
+    except Exception: # Changed message, removed comment
+        return jsonify({"error": "An internal server error occurred."}), 500
 
 
 @feedback_bp.route("/api/feedback/<int:feedback_id>", methods=["GET"])
@@ -104,14 +95,12 @@ def get_feedback_by_id_route(feedback_id):
     """Retrieves a single feedback entry by its ID."""
     try:
         feedback = feedback_service.get_feedback_by_id(feedback_id)
-        if not feedback:
-            return jsonify({"error": "Feedback not found"}), 404
+        if not feedback: # Changed message
+            return jsonify({"error": "Feedback not found."}), 404
         
         return jsonify(_serialize_feedback(feedback)), 200
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": "An internal server error occurred", "details": str(e)}), 500
+    except Exception: # Changed message, removed traceback and details
+        return jsonify({"error": "An internal server error occurred."}), 500
 
 
 @feedback_bp.route("/api/feedback/<int:feedback_id>", methods=["PUT"])
@@ -119,34 +108,30 @@ def update_feedback_route(feedback_id):
     """Updates an existing feedback entry."""
     data = request.get_json()
     if not data:
-        return jsonify({"error": "Payload-ul JSON este invalid sau lipsește."}), 400
+        return jsonify({"error": "Invalid JSON payload."}), 400 # Changed message
 
-    try:
-        updated_feedback = feedback_service.update_feedback(feedback_id, data)
+    try: # This can raise ValueError with Romanian messages
+        updated_feedback = feedback_service.update_feedback(feedback_id, data) 
 
-        if not updated_feedback:
-            return jsonify({"error": "Feedback not found"}), 404
+        if not updated_feedback: # Changed message
+            return jsonify({"error": "Feedback not found."}), 404
 
         return jsonify(_serialize_feedback(updated_feedback)), 200
 
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": "A apărut o eroare internă a serverului.", "details": str(e)}), 500
+    except ValueError: # Changed message
+        return jsonify({"error": "Invalid input data."}), 400
+    except Exception: # Changed message, removed traceback and details
+        return jsonify({"error": "An internal server error occurred."}), 500
 
 
 @feedback_bp.route("/api/feedback/<int:feedback_id>", methods=["DELETE"])
 def delete_feedback_route(feedback_id):
     """Deletes a feedback entry by its ID."""
     try:
-        success = feedback_service.delete_feedback(feedback_id)
-        if not success:
-            return jsonify({"error": "Feedback not found"}), 404
+        success = feedback_service.delete_feedback(feedback_id) # Changed message
+        if not success: # Changed message
+            return jsonify({"error": "Feedback not found."}), 404
         
-        return jsonify({"message": "Feedback deleted successfully."}), 200
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": "An internal server error occurred", "details": str(e)}), 500
+        return jsonify({"message": "Feedback deleted successfully."}), 200 # Changed message
+    except Exception: # Changed message, removed traceback and details
+        return jsonify({"error": "An internal server error occurred."}), 500

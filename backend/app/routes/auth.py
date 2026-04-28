@@ -9,7 +9,7 @@ def organizer_login():
     """Handles organizer login."""
     data = request.get_json()
     if not data or not data.get("email") or not data.get("password"):
-        return jsonify({"error": "Email and password are required"}), 400
+        return jsonify({"error": "Email and password are required."}), 400
 
     email = data.get("email")
     password = data.get("password")
@@ -18,11 +18,9 @@ def organizer_login():
         token, user_info = auth_service.login_organizer(email, password)
         return jsonify({"token": token, "user": user_info}), 200
     except ValueError as e:
-        return jsonify({"error": str(e)}), 401  # Unauthorized
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": "An internal server error occurred", "details": str(e)}), 500
+        return jsonify({"error": str(e)}), 401  # Unauthorized (e.g., "Invalid credentials.")
+    except Exception:
+        return jsonify({"error": "An internal server error occurred."}), 500
 
 
 @auth_bp.route("/admin/login", methods=["POST"])
@@ -30,7 +28,7 @@ def admin_login():
     """Handles admin login."""
     data = request.get_json()
     if not data or not data.get("email") or not data.get("password"):
-        return jsonify({"error": "Email and password are required"}), 400
+        return jsonify({"error": "Email and password are required."}), 400
 
     email = data.get("email")
     password = data.get("password")
@@ -39,11 +37,9 @@ def admin_login():
         token, user_info = auth_service.login_admin(email, password)
         return jsonify({"token": token, "user": user_info}), 200
     except ValueError as e:
-        return jsonify({"error": str(e)}), 401  # Unauthorized
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": "An internal server error occurred", "details": str(e)}), 500
+        return jsonify({"error": str(e)}), 401  # Unauthorized (e.g., "Invalid credentials.")
+    except Exception:
+        return jsonify({"error": "An internal server error occurred."}), 500
 
 
 @auth_bp.route("/student/google", methods=["POST"])
@@ -51,7 +47,7 @@ def student_google_login():
     """Handles student login/registration via mock Google Sign-In."""
     data = request.get_json()
     if not data or not data.get("email"):
-        return jsonify({"error": "Email is required"}), 400
+        return jsonify({"error": "Email is required."}), 400
 
     email = data.get("email")
     first_name = data.get("first_name")
@@ -64,10 +60,8 @@ def student_google_login():
         return jsonify({"token": token, "user": user_info}), 200
     except ValueError as e:
         return jsonify({"error": str(e)}), 400  # Bad Request for validation errors
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": "An internal server error occurred", "details": str(e)}), 500
+    except Exception:
+        return jsonify({"error": "An internal server error occurred."}), 500
 
 
 @auth_bp.route("/refresh", methods=["POST"])
@@ -76,17 +70,15 @@ def refresh_token_route():
     data = request.get_json()
     token = data.get("token")
     if not token:
-        return jsonify({"error": "Token is required"}), 400
+        return jsonify({"error": "Token is required."}), 400
 
     try:
         new_token, user_info = auth_service.refresh_token(token)
         return jsonify({"token": new_token, "user": user_info}), 200
     except ValueError as e:
-        return jsonify({"error": str(e)}), 401  # Unauthorized for token errors
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": "An internal server error occurred", "details": str(e)}), 500
+        return jsonify({"error": str(e)}), 401  # Unauthorized for token errors (e.g., "Invalid or expired token.")
+    except Exception:
+        return jsonify({"error": "An internal server error occurred."}), 500
 
 
 @auth_bp.route("/logout", methods=["POST"])
@@ -96,4 +88,4 @@ def logout():
     The client is responsible for deleting the JWT.
     """
     # This endpoint doesn't need to do anything on the server for a stateless JWT implementation.
-    return jsonify({"message": "Logout successful. Please discard the token on the client side."}), 200
+    return jsonify({"message": "Logout successful."}), 200

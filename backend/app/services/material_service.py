@@ -66,7 +66,7 @@ def update_material(material_id, data):
 
     update_fields = ['file_name', 'file_url', 'file_type']
     if not data or not any(field in data and data.get(field) is not None for field in update_fields):
-        raise ValueError("Payload-ul este gol sau nu conține câmpuri valide pentru actualizare (file_name, file_url, file_type).")
+        raise ValueError("Payload is empty or does not contain valid fields for update (file_name, file_url, file_type).")
 
     if 'file_name' in data and data.get('file_name') is not None:
         material_to_update.file_name = data['file_name'].strip()

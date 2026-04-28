@@ -11,8 +11,7 @@ def get_summary():
         summary = report_service.get_summary_report()
         return jsonify(summary), 200
     except Exception:
-        # In a real app, you should log the exception
-        return jsonify({"error": "An internal server error occurred"}), 500
+        return jsonify({"error": "An internal server error occurred."}), 500
 
 
 @reports_bp.route("/events-by-organizer", methods=["GET"])
@@ -22,8 +21,7 @@ def get_events_by_organizer_report_route():
         report = report_service.get_events_by_organizer_report()
         return jsonify(report), 200
     except Exception:
-        # In a real app, you should log the exception
-        return jsonify({"error": "An internal server error occurred"}), 500
+        return jsonify({"error": "An internal server error occurred."}), 500
 
 
 @reports_bp.route("/registrations-by-event", methods=["GET"])
@@ -35,7 +33,7 @@ def get_registrations_by_event_report_route():
         report = report_service.get_registrations_by_event_report()
         return jsonify(report), 200
     except Exception:
-        return jsonify({"error": "An internal server error occurred"}), 500
+        return jsonify({"error": "An internal server error occurred."}), 500
 
 
 @reports_bp.route("/feedback-by-event", methods=["GET"])
@@ -47,5 +45,4 @@ def get_feedback_by_event_report_route():
         report = report_service.get_feedback_by_event_report()
         return jsonify(report), 200
     except Exception:
-        # In a real app, you should log the exception
-        return jsonify({"error": "An internal server error occurred"}), 500
+        return jsonify({"error": "An internal server error occurred."}), 500

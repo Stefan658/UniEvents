@@ -4,36 +4,36 @@ from backend.app.models.event import Event
 
 
 def validate_id(value, model_class, field_name):
-    """Validează că un ID este un număr întreg și că entitatea există în baza de date."""
+    """Validates that an ID is an integer and the entity exists in the database."""
     if not isinstance(value, int) or value <= 0:
-        raise ValueError(f"'{field_name}' trebuie să fie un număr întreg pozitiv.")
+        raise ValueError(f"'{field_name}' must be a positive integer.")
 
     entity = db.session.get(model_class, value)
     if not entity:
-        raise ValueError(f"{model_class.__name__} cu ID-ul {value} nu a fost găsit.")
+        raise ValueError(f"{model_class.__name__} with ID {value} not found.")
     return entity
 
 
 def validate_rating(rating):
-    """Validează că rating-ul este un număr întreg între 1 și 5."""
+    """Validates that the rating is an integer between 1 and 5."""
     if not isinstance(rating, int) or not (1 <= rating <= 5):
-        raise ValueError("Rating-ul trebuie să fie un număr întreg între 1 și 5.")
+        raise ValueError("Rating must be an integer between 1 and 5.")
     return rating
 
 
 def validate_feedback_payload(data):
-    """Validează datele primite pentru crearea unui feedback."""
+    """Validates the data received for creating feedback."""
     if not isinstance(data, dict):
-        raise ValueError("Datele de feedback trebuie să fie în format JSON.")
+        raise ValueError("Feedback data must be in JSON format.")
 
     user_id = data.get("user_id")
     event_id = data.get("event_id")
     rating = data.get("rating")
     comment = data.get("comment")
 
-    validate_id(user_id, User, "user_id")  # Va ridica ValueError dacă nu e valid
-    validate_id(event_id, Event, "event_id")  # Va ridica ValueError dacă nu e valid
-    validate_rating(rating)  # Va ridica ValueError dacă nu e valid
+    validate_id(user_id, User, "user_id")  # Will raise ValueError if invalid
+    validate_id(event_id, Event, "event_id")  # Will raise ValueError if invalid
+    validate_rating(rating)  # Will raise ValueError if invalid
 
     # Comentariul este opțional, nu necesită validare strictă aici
 

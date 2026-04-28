@@ -75,8 +75,18 @@ def delete_registration(registration_id):
     return True
 
 
+ALLOWED_REGISTRATION_STATUSES = ["confirmed", "cancelled", "pending"]
+
+
 def update_registration_status(registration_id, status):
     """Updates the status of a specific registration."""
+    if not isinstance(status, str):
+        raise ValueError("Status must be a string.")
+    
+    normalized_status = status.strip().lower()
+    if normalized_status not in ALLOWED_REGISTRATION_STATUSES:
+        raise ValueError(f"Invalid status '{status}'. Allowed statuses are: {', '.join(ALLOWED_REGISTRATION_STATUSES)}")
+
     registration = (
         Registration.query.options(
             joinedload(Registration.user),
@@ -88,7 +98,7 @@ def update_registration_status(registration_id, status):
     if not registration:
         return None
 
-    registration.status = status
+    registration.status = normalized_status
     db.session.commit()
 
     return registration

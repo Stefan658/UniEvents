@@ -8,7 +8,7 @@ from backend.app.models.event import Event
 
 
 def create_feedback(user_id, event_id, rating, comment):
-    """Creează o nouă înregistrare de feedback în baza de date."""
+    """Creates a new feedback entry in the database."""
     try:
         new_feedback = Feedback(
             user_id=user_id,
@@ -21,8 +21,8 @@ def create_feedback(user_id, event_id, rating, comment):
         return new_feedback
     except IntegrityError:
         db.session.rollback()
-        # Adăugăm un prefix specific pentru a indica o eroare de duplicat
-        raise ValueError("FeedbackDuplicateError: Feedback-ul pentru acest utilizator și eveniment există deja.")
+        # Specific prefix to indicate duplicate error
+        raise ValueError("FeedbackDuplicateError: Feedback for this user and event already exists.")
 
 
 def get_all_feedback():
@@ -118,7 +118,7 @@ def update_feedback(feedback_id, data):
     if 'rating' in data and data['rating'] is not None:
         rating = data['rating']
         if not isinstance(rating, int) or not (1 <= rating <= 5):
-            raise ValueError("Rating-ul trebuie să fie un număr întreg între 1 și 5.")
+            raise ValueError("Rating must be an integer between 1 and 5.")
         feedback_entry.rating = rating
         update_made = True
 
@@ -127,7 +127,7 @@ def update_feedback(feedback_id, data):
         update_made = True
 
     if not update_made:
-        raise ValueError("Payload-ul este gol sau nu conține câmpuri valide pentru actualizare (rating, comment).")
+        raise ValueError("Payload is empty or does not contain valid fields for update (rating, comment).")
 
     db.session.commit()
     return feedback_entry

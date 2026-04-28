@@ -19,11 +19,11 @@ def create_category(data):
     description = data.get("description")
 
     if not name or not name.strip():
-        raise ValueError("Numele categoriei este obligatoriu.")
+        raise ValueError("Category name is required.")
 
     # Check for uniqueness (case-insensitive)
     if Category.query.filter(Category.name.ilike(name.strip())).first():
-        raise ValueError(f"O categorie cu numele '{name}' există deja.")
+        raise ValueError(f"A category with the name '{name}' already exists.")
 
     new_category = Category(name=name.strip(), description=description)
 
@@ -33,7 +33,7 @@ def create_category(data):
         return new_category
     except IntegrityError:  # Fallback for race conditions
         db.session.rollback()
-        raise ValueError(f"O categorie cu numele '{name}' există deja.")
+        raise ValueError(f"A category with the name '{name}' already exists.")
 
 
 def update_category(category_id, data):
@@ -45,19 +45,19 @@ def update_category(category_id, data):
     update_fields = ["name", "description"]
     if not data or not any(field in data for field in update_fields):
         raise ValueError(
-            "Payload-ul este gol sau nu conține câmpuri valide pentru actualizare (name, description)."
+            "Payload is empty or does not contain valid fields for update (name, description)."
         )
 
     if "name" in data and data["name"] is not None:
         new_name = data["name"].strip()
         if not new_name:
-            raise ValueError("Numele categoriei nu poate fi gol.")
+            raise ValueError("Category name cannot be empty.")
 
         # Check for uniqueness only if the name is actually changing
         if new_name.lower() != category.name.lower():
             existing = Category.query.filter(Category.name.ilike(new_name), Category.id != category_id).first()
             if existing:
-                raise ValueError(f"O categorie cu numele '{new_name}' există deja.")
+                raise ValueError(f"A category with the name '{new_name}' already exists.")
             category.name = new_name
 
     if "description" in data: # Allow setting description to empty string

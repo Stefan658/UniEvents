@@ -140,3 +140,82 @@ GET /api/reports/summary
 GET /api/reports/events-by-organizer
 GET /api/reports/registrations-by-event
 GET /api/reports/feedback-by-event
+
+
+---
+
+## Stadiu proiect
+
+Backendul aplicației este aproape complet finalizat și testat.
+
+- Backend implementare: ~95%
+- Backend demo-ready: ~95%
+- Frontend: în curs de dezvoltare (MVP planificat)
+- Documentație: în curs de finalizare
+
+Proiectul este împărțit în 3 etape principale:
+
+1. **Zona 1 — Polish & Consistență**
+   - uniformizare mesaje API
+   - eliminare inconsistențe
+   - curățare cod
+
+2. **Zona 2 — Hardening & Robustness**
+   - validări input (ex: `max_participants`)
+   - validare statusuri (registrations/events)
+   - eliminare fallback-uri nesigure (`SECRET_KEY`)
+   - uniformizare mesaje de eroare în engleză
+   - verificări minime de consistență
+
+3. **Zona 3 — Documentare & livrabile**
+   - README final
+   - capturi pentru livrabile
+   - raport de cercetare
+
+---
+
+## Securitate și validare (Zona 2)
+
+Au fost implementate următoarele îmbunătățiri:
+
+- eliminare fallback insecure pentru `SECRET_KEY`
+- validare strictă pentru:
+  - `max_participants` (integer pozitiv)
+  - statusuri înregistrări (`confirmed`, `cancelled`, `pending`)
+  - statusuri evenimente
+- conversie completă a mesajelor de eroare în limba engleză
+- verificări minime de consistență pentru ownership (organizator eveniment)
+
+---
+
+## Testare manuală (Postman)
+
+Pentru validarea backendului, au fost testate următoarele scenarii:
+
+### Autentificare
+- login organizator/admin
+- Google login student
+- refresh token
+
+### Evenimente
+- creare eveniment valid/invalid
+- editare eveniment
+- ștergere eveniment
+- validare `max_participants`
+
+### Înscrieri
+- creare înscriere
+- schimbare status valid/invalid
+- prevenire valori invalide
+
+### Feedback
+- creare feedback
+- prevenire duplicate
+- validare rating
+
+### Cazuri de eroare
+- date invalide
+- ID-uri inexistente
+- tipuri greșite (string vs int)
+
+---

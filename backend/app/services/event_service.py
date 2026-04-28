@@ -47,6 +47,16 @@ def create_event(data):
         except (TypeError, ValueError):
             raise ValueError("Invalid date format for 'registration_deadline'. Please use ISO 8601 format (YYYY-MM-DDTHH:MM:SS).")
 
+    # Validate max_participants
+    max_participants = data.get('max_participants')
+    if max_participants is not None:
+        try:
+            max_participants = int(max_participants)
+            if max_participants <= 0:
+                raise ValueError("'max_participants' must be a positive integer.")
+        except (TypeError, ValueError):
+            raise ValueError("'max_participants' must be a positive integer.")
+
     # --- Creation ---
     new_event = Event(
         title=data['title'],
@@ -60,7 +70,7 @@ def create_event(data):
         registration_link=data.get('registration_link'),
         qr_code_url=data.get('qr_code_url'),
         status=data.get('status', 'active'),
-        max_participants=data.get('max_participants'),
+        max_participants=max_participants,
         registration_deadline=registration_deadline,
         requires_registration=data.get('requires_registration', False),
         is_free_entry=data.get('is_free_entry', True)
@@ -119,6 +129,14 @@ def update_event(event_id, data):
                 setattr(event, field, None)
 
     # --- Post-update Validation ---
+    if event.max_participants is not None:
+        try:
+            event.max_participants = int(event.max_participants)
+            if event.max_participants <= 0:
+                raise ValueError("'max_participants' must be a positive integer.")
+        except (TypeError, ValueError):
+            raise ValueError("'max_participants' must be a positive integer.")
+
     if event.end_at and event.start_at and event.end_at <= event.start_at:
         raise ValueError("'end_at' must be after 'start_at'.")
 

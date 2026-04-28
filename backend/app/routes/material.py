@@ -27,10 +27,8 @@ def get_all_materials_route():
     try:
         materials = material_service.get_all_materials()
         return jsonify([_serialize_material(mat) for mat in materials]), 200
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": "An internal server error occurred", "details": str(e)}), 500
+    except Exception:
+        return jsonify({"error": "An internal server error occurred."}), 500
 
 
 
@@ -40,16 +38,15 @@ def add_material():
     """Adds a new material for an event."""
     data = request.get_json()
     if not data:
-        return jsonify({"error": "Invalid JSON payload"}), 400
+        return jsonify({"error": "Invalid JSON payload."}), 400
 
     try:
         new_material = material_service.create_material(data)
         return jsonify(_serialize_material(new_material)), 201
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
+    except ValueError:
+        return jsonify({"error": "Invalid input data."}), 400
     except Exception:
-        # In a real app, you should log the exception
-        return jsonify({"error": "An internal server error occurred"}), 500
+        return jsonify({"error": "An internal server error occurred."}), 500
 
 
 @material_bp.route("/materials/<int:material_id>", methods=["GET"])
@@ -58,12 +55,11 @@ def get_material_route(material_id):
     try:
         material = material_service.get_material_by_id(material_id)
         if not material:
-            return jsonify({"error": "Material not found"}), 404
+            return jsonify({"error": "Material not found."}), 404
 
         return jsonify(_serialize_material(material)), 200
     except Exception:
-        # In a real app, you should log the exception
-        return jsonify({"error": "An internal server error occurred"}), 500
+        return jsonify({"error": "An internal server error occurred."}), 500
 
 
 @material_bp.route("/materials/<int:material_id>", methods=["DELETE"])
@@ -72,12 +68,11 @@ def delete_material_route(material_id):
     try:
         success = material_service.delete_material(material_id)
         if not success:
-            return jsonify({"error": "Material not found"}), 404
+            return jsonify({"error": "Material not found."}), 404
 
-        return jsonify({"message": "Material deleted successfully"}), 200
+        return jsonify({"message": "Material deleted successfully."}), 200
     except Exception:
-        # For a production app, it's better to log the exception
-        return jsonify({"error": "An internal server error occurred"}), 500
+        return jsonify({"error": "An internal server error occurred."}), 500
 
 
 @material_bp.route("/materials/<int:material_id>", methods=["PUT"])
@@ -85,19 +80,17 @@ def update_material_route(material_id):
     """Updates an existing material's information."""
     data = request.get_json()
     if not data:
-        return jsonify({"error": "Payload-ul JSON este invalid sau lipsește."}), 400
+        return jsonify({"error": "Invalid JSON payload."}), 400
 
     try:
         updated_material = material_service.update_material(material_id, data)
 
         if updated_material is None:
-            return jsonify({"error": "Material not found"}), 404
+            return jsonify({"error": "Material not found."}), 404
 
         return jsonify(_serialize_material(updated_material)), 200
 
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": "A apărut o eroare internă a serverului.", "details": str(e)}), 500
+    except ValueError:
+        return jsonify({"error": "Invalid input data."}), 400
+    except Exception:
+        return jsonify({"error": "An internal server error occurred."}), 500

@@ -31,7 +31,7 @@ def login_organizer(email, password):
     }
     token = jwt.encode(
         payload,
-        current_app.config.get('SECRET_KEY', 'dev-fallback-secret-key'),
+        current_app.config['SECRET_KEY'],
         algorithm='HS256'
     )
 
@@ -90,7 +90,7 @@ def login_or_register_student_google(email, first_name, last_name):
     }
     token = jwt.encode(
         payload,
-        current_app.config.get('SECRET_KEY', 'dev-fallback-secret-key'),
+        current_app.config['SECRET_KEY'],
         algorithm='HS256'
     )
 
@@ -131,7 +131,7 @@ def login_admin(email, password):
     }
     token = jwt.encode(
         payload,
-        current_app.config.get('SECRET_KEY', 'dev-fallback-secret-key'),
+        current_app.config['SECRET_KEY'],
         algorithm='HS256'
     )
 
@@ -155,7 +155,7 @@ def refresh_token(token):
     try:
         payload = jwt.decode(
             token,
-            current_app.config.get('SECRET_KEY', 'dev-fallback-secret-key'),
+            current_app.config['SECRET_KEY'],
             algorithms=['HS256']
         )
     except jwt.ExpiredSignatureError:
@@ -186,7 +186,7 @@ def refresh_token(token):
     }
     new_token = jwt.encode(
         new_payload,
-        current_app.config.get('SECRET_KEY', 'dev-fallback-secret-key'),
+        current_app.config['SECRET_KEY'],
         algorithm='HS256'
     )
 

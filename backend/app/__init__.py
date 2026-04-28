@@ -21,9 +21,9 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
-    # Asigurăm existența unui SECRET_KEY pentru a evita crăparea generării JWT
+    # Ensure SECRET_KEY is present for JWT generation and security
     if not app.config.get('SECRET_KEY'):
-        app.config['SECRET_KEY'] = 'dev-fallback-secret-key'
+        raise RuntimeError("SECRET_KEY is not set in the environment or configuration.")
 
     # Initialize Flask extensions
     CORS(app)
