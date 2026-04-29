@@ -1,9 +1,9 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, Response
 from datetime import datetime
 from sqlalchemy.orm import joinedload
 from backend.app.models.event import Event
 from backend.app.models.material import Material
-from backend.app.services import event_service
+from backend.app.services import event_service, calendar_service
 
 events_bp = Blueprint("events", __name__)
 
@@ -235,5 +235,25 @@ def search_events_route():
         return jsonify([_serialize_event(event) for event in events]), 200
     except ValueError:
         return jsonify({"error": "Invalid input data."}), 400
+    except Exception:
+        return jsonify({"error": "An internal server error occurred."}), 500
+
+
+@events_bp.route("/api/events/<int:event_id>/calendar.ics", methods=["GET"])
+def get_event_calendar_ics(event_id):
+    """Generates and returns an .ics file for a specific event."""
+    event = Event.query.get(event_id)
+    if not event:
+        return jsonify({"error": "Event not found."}), 404
+
+    try:
+        ics_content = calendar_service.generate_ics(event)
+        return Response(
+            ics_content,
+            mimetype="text/calendar",
+            headers={
+                "Content-Disposition": f"attachment; filename=event-{event_id}.ics"
+            },
+        )
     except Exception:
         return jsonify({"error": "An internal server error occurred."}), 500

@@ -50,13 +50,14 @@ def login_organizer(email, password):
 
 def login_or_register_student_google(email, first_name, last_name):
     """
-    Handles student login/registration via a mock Google Sign-In.
+    Handles student/professor login/registration via a mock Google Sign-In.
     Creates a new student user if one does not exist.
     Returns a JWT for the student.
     """
     normalized_email = email.strip().lower()
-    if not normalized_email or not normalized_email.endswith("@student.usv.ro"):
-        raise ValueError("Invalid email. Must be a '@student.usv.ro' address.")
+    allowed_domains = ["@student.usv.ro", "@profesor.usv.ro"]
+    if not any(normalized_email.endswith(domain) for domain in allowed_domains):
+        raise ValueError("Invalid email. Must be a '@student.usv.ro' or '@profesor.usv.ro' address.")
 
     user = User.query.filter_by(email=normalized_email).first()
 

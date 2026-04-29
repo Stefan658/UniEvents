@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, Calendar, LayoutDashboard, Shield, Menu, X, Home } from 'lucide-react';
+import { LogOut, Calendar, LayoutDashboard, Shield, Menu, X, Home, Bookmark, ExternalLink, BookOpen } from 'lucide-react';
 import Button from './Button';
 import { logoutUser } from '../api/auth';
 
@@ -22,6 +22,7 @@ const Navbar = () => {
 
   const navLinks = [
     { name: 'Browse Events', path: '/', icon: Home },
+    ...(isAuthenticated && role === 'student' ? [{ name: 'My Registrations', path: '/my-registrations', icon: Bookmark }] : []),
     ...(isAuthenticated && role === 'organizer' ? [{ name: 'Dashboard', path: '/organizer', icon: LayoutDashboard }] : []),
     ...(isAuthenticated && role === 'admin' ? [{ name: 'Admin Panel', path: '/admin', icon: Shield }] : []),
   ];
@@ -34,7 +35,7 @@ const Navbar = () => {
         <div className="flex justify-between h-18 py-3">
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-2.5 group">
-              <div className="bg-primary-600 p-2 rounded-xl group-hover:rotate-6 transition-transform duration-300 shadow-primary-200 shadow-lg">
+              <div className="bg-primary-600 p-2 rounded-xl group-hover:rotate-6 transition-transform duration-300 shadow-primary-200 shadow-xl">
                 <Calendar className="h-6 w-6 text-white" />
               </div>
               <span className="text-2xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-br from-primary-600 to-primary-900">
@@ -57,6 +58,17 @@ const Navbar = () => {
                   <span>{link.name}</span>
                 </Link>
               ))}
+              
+              <a 
+                href="https://orar.usv.ro/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="px-4 py-2 rounded-xl text-sm font-bold transition-all duration-200 flex items-center space-x-2 text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+              >
+                <BookOpen className="h-4 w-4 text-gray-400" />
+                <span>Orar USV</span>
+                <ExternalLink className="h-3 w-3 text-gray-300" />
+              </a>
             </div>
           </div>
 
@@ -66,7 +78,7 @@ const Navbar = () => {
                 <div className="hidden md:flex flex-col items-end mr-2">
                   <span className="text-sm font-bold text-gray-900 leading-none mb-1">{user.name || user.email.split('@')[0]}</span>
                   <span className="text-[10px] font-black uppercase tracking-widest text-primary-600 bg-primary-50 px-1.5 py-0.5 rounded-md leading-none">
-                    {role}
+                    {role === 'student' ? 'Participant' : role}
                   </span>
                 </div>
                 <Button variant="secondary" onClick={handleLogout} className="!p-2.5 !rounded-xl border-gray-100 hover:border-red-100 hover:bg-red-50 hover:text-red-600 transition-all">
@@ -101,6 +113,15 @@ const Navbar = () => {
               {link.name}
             </Link>
           ))}
+          <a 
+            href="https://orar.usv.ro/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="block px-4 py-3 rounded-xl text-base font-bold text-gray-600"
+            onClick={() => setIsOpen(false)}
+          >
+            Orar USV
+          </a>
         </div>
       )}
     </nav>

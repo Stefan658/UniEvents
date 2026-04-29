@@ -15,7 +15,7 @@ export const registerForEvent = async (userId, eventId) => {
       user_id: userId, 
       event_id: eventId 
     });
-    return response.data?.data || response.data;
+    return response.data;
   } catch (error) {
     throw error.response?.data?.error || 'Registration failed';
   }
@@ -23,7 +23,8 @@ export const registerForEvent = async (userId, eventId) => {
 
 export const cancelRegistration = async (registrationId) => {
   try {
-    await axiosClient.delete(`/registrations/${registrationId}`);
+    const response = await axiosClient.delete(`/registrations/${registrationId}`);
+    return response.data;
   } catch (error) {
     throw error.response?.data?.error || 'Failed to cancel registration';
   }
@@ -35,5 +36,19 @@ export const getEventRegistrations = async (eventId) => {
     return response.data?.data || response.data;
   } catch (error) {
     throw error.response?.data?.error || 'Failed to fetch event registrations';
+  }
+};
+
+export const getMyRegistrations = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await axiosClient.get('/registrations/me', {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data?.error || 'Failed to fetch your registrations';
   }
 };

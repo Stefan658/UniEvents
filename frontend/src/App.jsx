@@ -12,6 +12,8 @@ import OrganizerDashboardPage from './pages/OrganizerDashboardPage';
 import CreateEventPage from './pages/CreateEventPage';
 import EditEventPage from './pages/EditEventPage';
 import SupportPage from './pages/SupportPage';
+import AdminDashboardPage from './pages/AdminDashboardPage';
+import MyRegistrationsPage from './pages/MyRegistrationsPage';
 
 function App() {
   return (
@@ -27,6 +29,16 @@ function App() {
               <Route path="/events/:id" element={<EventDetailsPage />} />
               <Route path="/support" element={<SupportPage />} />
               
+              {/* Participant Routes */}
+              <Route 
+                path="/my-registrations" 
+                element={
+                  <ProtectedRoute allowedRoles={['student']}>
+                    <MyRegistrationsPage />
+                  </ProtectedRoute>
+                } 
+              />
+
               {/* Organizer Routes */}
               <Route 
                 path="/organizer" 
@@ -49,6 +61,16 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={['organizer']}>
                     <EditEventPage />
+                  </ProtectedRoute>
+                } 
+              />
+
+              {/* Admin Routes */}
+              <Route 
+                path="/admin" 
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <AdminDashboardPage />
                   </ProtectedRoute>
                 } 
               />

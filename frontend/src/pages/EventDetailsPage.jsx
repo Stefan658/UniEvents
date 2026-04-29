@@ -73,11 +73,30 @@ const EventDetailsPage = () => {
     setActionLoading(true);
     setRegistrationMessage({ type: '', text: '' });
     try {
-      const newReg = await registerForEvent(user.id, event.id);
-      setUserRegistration(newReg);
-      setRegistrationMessage({ type: 'success', text: 'Registration successful!' });
+      const response = await registerForEvent(user.id, event.id);
+      setUserRegistration(response.data);
+      
+      let message = 'Registration successful.';
+      if (response.email_status === 'sent') {
+        message += ' Confirmation email sent.';
+      } else if (response.email_status === 'skipped') {
+        message += ' Email confirmation is not configured in this environment.';
+      } else if (response.email_status === 'failed') {
+        message += ' Confirmation email could not be sent.';
+      }
+      
+      setRegistrationMessage({ type: 'success', text: message });
+      
+      // Auto-hide message after 5 seconds
+      setTimeout(() => {
+        setRegistrationMessage({ type: '', text: '' });
+      }, 5000);
     } catch (err) {
       setRegistrationMessage({ type: 'error', text: err || 'Registration failed.' });
+      // Also auto-hide error messages after 5 seconds
+      setTimeout(() => {
+        setRegistrationMessage({ type: '', text: '' });
+      }, 5000);
     } finally {
       setActionLoading(false);
     }
@@ -91,11 +110,30 @@ const EventDetailsPage = () => {
     setActionLoading(true);
     setRegistrationMessage({ type: '', text: '' });
     try {
-      await cancelRegistration(userRegistration.id);
+      const response = await cancelRegistration(userRegistration.id);
       setUserRegistration(null);
-      setRegistrationMessage({ type: 'success', text: 'Registration cancelled.' });
+      
+      let message = 'Registration cancelled.';
+      if (response.email_status === 'sent') {
+        message += ' Cancellation email sent.';
+      } else if (response.email_status === 'skipped') {
+        message += ' Email cancellation is not configured in this environment.';
+      } else if (response.email_status === 'failed') {
+        message += ' Cancellation email could not be sent.';
+      }
+      
+      setRegistrationMessage({ type: 'success', text: message });
+      
+      // Auto-hide message after 5 seconds
+      setTimeout(() => {
+        setRegistrationMessage({ type: '', text: '' });
+      }, 5000);
     } catch (err) {
       setRegistrationMessage({ type: 'error', text: err || 'Cancellation failed.' });
+      // Also auto-hide error messages after 5 seconds
+      setTimeout(() => {
+        setRegistrationMessage({ type: '', text: '' });
+      }, 5000);
     } finally {
       setActionLoading(false);
     }
@@ -266,7 +304,7 @@ const EventDetailsPage = () => {
                       {!isAuthenticated ? (
                         <div className="space-y-4">
                           <p className="text-sm font-bold text-gray-600 bg-gray-50 p-4 rounded-2xl border border-dashed border-gray-200 text-center leading-relaxed">
-                            Sign in to reserve your spot for this event.
+                            Sign in to reserve your spot for this event. Available for students and professors.
                           </p>
                           <Link to="/login" state={{ from: { pathname: `/events/${id}` } }}>
                             <Button className="w-full !py-4 shadow-primary-200 shadow-xl mt-2">
@@ -308,7 +346,7 @@ const EventDetailsPage = () => {
                             {role === 'admin' ? 'Admin View' : 'Organizer View'}
                           </p>
                           <p className="text-xs font-medium text-blue-600 mt-1">
-                            Registration is only available for students.
+                            Registration is only available for university participants.
                           </p>
                         </div>
                       )}

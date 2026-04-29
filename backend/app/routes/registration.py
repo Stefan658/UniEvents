@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from backend.app.services import registration_service
+from backend.app.utils.decorators import token_required
 
 registration_bp = Blueprint("registrations", __name__, url_prefix="/api")
 
@@ -23,6 +24,9 @@ def _serialize_registration(registration):
         "user_email": registration.user.email if registration.user else None,
         "user_full_name": user_full_name,
         "event_title": registration.event.title if registration.event else None,
+        "event_start_at": registration.event.start_at.isoformat() if registration.event else None,
+        "event_location": registration.event.location if registration.event else None,
+        "event_participation_type": registration.event.participation_type if registration.event else None,
     }
 
 
@@ -44,11 +48,15 @@ def add_registration():
         return jsonify({"error": "User ID and event ID are required."}), 400
 
     try:
-        new_registration = registration_service.create_registration(
+        new_registration, email_status = registration_service.create_registration(
             user_id=data["user_id"],
             event_id=data["event_id"],
         )
-        return jsonify(_serialize_registration(new_registration)), 201
+        return jsonify({
+            "message": "Registration successful.",
+            "data": _serialize_registration(new_registration),
+            "email_status": email_status
+        }), 201
     except ValueError as e:
         if "DuplicateRegistrationError:" in str(e): # Changed message
             return jsonify({"error": "User is already registered for this event."}), 409
@@ -92,14 +100,17 @@ def update_registration(registration_id):
         return jsonify({"error": "Invalid JSON payload or 'status' field is missing."}), 400 # Changed message
 
     try:
-        updated_registration = registration_service.update_registration_status(
+        updated_registration, email_status = registration_service.update_registration_status(
             registration_id, data["status"]
         )
 
         if not updated_registration: # Changed message
             return jsonify({"error": "Registration not found."}), 404
 
-        return jsonify(_serialize_registration(updated_registration)), 200
+        return jsonify({
+            "data": _serialize_registration(updated_registration),
+            "email_status": email_status
+        }), 200
     except Exception: # Changed message, removed details
         return jsonify({"error": "An internal server error occurred."}), 500
 
@@ -108,10 +119,24 @@ def update_registration(registration_id):
 def delete_registration_route(registration_id):
     """Deletes an existing event registration."""
     try:
-        success = registration_service.delete_registration(registration_id) # Changed message
+        success, email_status = registration_service.delete_registration(registration_id) # Changed message
         if not success: # Changed message
             return jsonify({"error": "Registration not found."}), 404
 
-        return jsonify({"message": "Registration deleted successfully."}), 200 # Changed message
+        return jsonify({
+            "message": "Registration deleted successfully.",
+            "email_status": email_status
+        }), 200 # Changed message
     except Exception: # Changed message
+        return jsonify({"error": "An internal server error occurred."}), 500
+
+
+@registration_bp.route("/registrations/me", methods=["GET"])
+@token_required
+def get_my_registrations(current_user):
+    """Returns registrations for the currently authenticated user."""
+    try:
+        registrations = registration_service.get_registrations_for_user(current_user.id)
+        return jsonify([_serialize_registration(reg) for reg in registrations]), 200
+    except Exception:
         return jsonify({"error": "An internal server error occurred."}), 500

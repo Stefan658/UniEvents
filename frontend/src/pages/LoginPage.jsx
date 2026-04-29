@@ -33,8 +33,8 @@ const LoginPage = () => {
       } else if (activeTab === 'admin') {
         response = await loginAdmin(email, password);
       } else {
-        // Student login
-        response = await loginStudent({ email, first_name: "Student", last_name: "USV" });
+        // Participant login
+        response = await loginStudent({ email, first_name: "Participant", last_name: "USV" });
       }
 
       login(response.user, response.token);
@@ -89,7 +89,7 @@ const LoginPage = () => {
               }`}
             >
               <GraduationCap className="w-3.5 h-3.5 mr-2" />
-              Student
+              Participant
             </button>
             <button
               onClick={() => setActiveTab('organizer')}
@@ -121,7 +121,7 @@ const LoginPage = () => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder={activeTab === 'student' ? "name@student.usv.ro" : "email@uni.events"}
+                placeholder={activeTab === 'student' ? "user@student.usv.ro or user@profesor.usv.ro" : "email@uni.events"}
                 required
               />
 
@@ -142,7 +142,7 @@ const LoginPage = () => {
               <div className="p-4 rounded-2xl bg-primary-50 border border-primary-100 flex items-start space-x-3">
                 <Sparkles className="w-5 h-5 text-primary-600 shrink-0" />
                 <p className="text-xs font-bold text-primary-700 leading-relaxed">
-                  Students use Google Sign-In with their @student.usv.ro account. (Demo: enter your email to proceed)
+                  Students and Professors use Google Sign-In with their @student.usv.ro or @profesor.usv.ro account. (Demo: enter your email to proceed)
                 </p>
               </div>
             )}
