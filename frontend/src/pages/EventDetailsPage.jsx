@@ -30,11 +30,28 @@ const EventDetailsPage = () => {
   const { user, isAuthenticated, role } = useAuth();
   const [event, setEvent] = useState(null);
   const [materials, setMaterials] = useState([]);
+  const [registrations, setRegistrations] = useState([]);
   const [userRegistration, setUserRegistration] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [registrationMessage, setRegistrationMessage] = useState({ type: '', text: '' });
+
+  const fetchRegistrations = async () => {
+    try {
+      const registrationsData = await getEventRegistrations(id);
+      setRegistrations(registrationsData);
+
+      if (isAuthenticated && user) {
+        const myReg = Array.isArray(registrationsData) 
+          ? registrationsData.find(r => r.user_id === user.id && r.status !== 'cancelled') 
+          : null;
+        setUserRegistration(myReg);
+      }
+    } catch (err) {
+      console.error('Failed to fetch registrations:', err);
+    }
+  };
 
   useEffect(() => {
     const fetchEventData = async () => {
@@ -45,15 +62,8 @@ const EventDetailsPage = () => {
         ]);
         setEvent(eventData);
         setMaterials(materialsData);
-
-        // If authenticated as student, check if already registered
-        if (isAuthenticated && role === 'student' && user) {
-          const registrations = await getEventRegistrations(id);
-          const myReg = Array.isArray(registrations) 
-            ? registrations.find(r => r.user_id === user.id) 
-            : null;
-          setUserRegistration(myReg);
-        }
+        
+        await fetchRegistrations();
       } catch (err) {
         setError(err);
       } finally {
@@ -74,7 +84,9 @@ const EventDetailsPage = () => {
     setRegistrationMessage({ type: '', text: '' });
     try {
       const response = await registerForEvent(user.id, event.id);
-      setUserRegistration(response.data);
+      
+      // Refresh registrations to update available slots and user status
+      await fetchRegistrations();
       
       let message = 'Registration successful.';
       if (response.email_status === 'sent') {
@@ -111,7 +123,9 @@ const EventDetailsPage = () => {
     setRegistrationMessage({ type: '', text: '' });
     try {
       const response = await cancelRegistration(userRegistration.id);
-      setUserRegistration(null);
+      
+      // Refresh registrations to update available slots and user status
+      await fetchRegistrations();
       
       let message = 'Registration cancelled.';
       if (response.email_status === 'sent') {
@@ -162,6 +176,14 @@ const EventDetailsPage = () => {
   if (!event) return <PageContainer><ErrorMessage message="Event not found." /></PageContainer>;
 
   const isPastEvent = new Date(event.end_at) < new Date();
+
+  const confirmedCount = Array.isArray(registrations) 
+    ? registrations.filter(r => r.status === 'confirmed' || r.status === 'pending').length 
+    : 0;
+
+  const availableSlots = event.max_participants !== null && event.max_participants !== undefined
+    ? Math.max(0, event.max_participants - confirmedCount) 
+    : 'Unlimited';
 
   return (
     <PageContainer>
@@ -294,7 +316,7 @@ const EventDetailsPage = () => {
                       <span className="font-bold text-gray-700">Available Slots</span>
                     </div>
                     <span className="text-primary-600 font-black">
-                      {event.max_participants ? event.max_participants : 'Unlimited'}
+                      {availableSlots}
                     </span>
                   </div>
 
@@ -335,8 +357,9 @@ const EventDetailsPage = () => {
                               className="w-full !py-4 !text-base shadow-primary-200 shadow-xl"
                               onClick={handleRegister}
                               isLoading={actionLoading}
+                              disabled={availableSlots === 0}
                             >
-                              Register Now
+                              {availableSlots === 0 ? 'Sold Out' : 'Register Now'}
                             </Button>
                           )}
                         </>

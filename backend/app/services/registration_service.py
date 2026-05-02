@@ -18,6 +18,16 @@ def create_registration(user_id, event_id):
     if not event:
         raise ValueError(f"Event with ID {event_id} not found.")
 
+    # Check for available slots if max_participants is set
+    if event.max_participants is not None:
+        active_registrations_count = Registration.query.filter(
+            Registration.event_id == event_id,
+            Registration.status.in_(["confirmed", "pending"])
+        ).count()
+        
+        if active_registrations_count >= event.max_participants:
+            raise ValueError("Event is full.")
+
     try:
         new_registration = Registration(
             user_id=user_id,
