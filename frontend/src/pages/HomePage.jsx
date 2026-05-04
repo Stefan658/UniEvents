@@ -4,9 +4,12 @@ import EventCard from '../components/EventCard';
 import Loader from '../components/Loader';
 import ErrorMessage from '../components/ErrorMessage';
 import { getAllEvents } from '../api/events';
+import { getMyRegistrations } from '../api/registrations';
+import { useAuth } from '../contexts/AuthContext';
 import { Sparkles, Calendar } from 'lucide-react';
 
 const HomePage = () => {
+  const { user, isAuthenticated, role } = useAuth();
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [pastEvents, setPastEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -21,11 +24,38 @@ const HomePage = () => {
         const upcoming = data.filter(event => new Date(event.start_at) >= now)
           .sort((a, b) => new Date(a.start_at) - new Date(b.start_at));
         
-        const past = data.filter(event => new Date(event.start_at) < now)
-          .sort((a, b) => new Date(b.start_at) - new Date(a.start_at));
-
         setUpcomingEvents(upcoming);
-        setPastEvents(past);
+
+        // Personalize Past Events
+        if (isAuthenticated && role === 'student') {
+          try {
+            const myRegs = await getMyRegistrations();
+            const pastRegs = myRegs
+              .filter(reg => new Date(reg.event_start_at) < now)
+              .map(reg => ({
+                id: reg.event_id,
+                title: reg.event_title,
+                start_at: reg.event_start_at,
+                location: reg.event_location,
+                participation_type: reg.event_participation_type,
+                // We might lack some fields like category_name here if not in registration serializer
+                // But EventCard expects some fields. Let's check what reg has.
+              }));
+            
+            // To get full event data for the cards, we should filter the global data
+            const myPastEventIds = new Set(pastRegs.map(r => r.id));
+            const personalizedPast = data.filter(event => myPastEventIds.has(event.id))
+              .sort((a, b) => new Date(b.start_at) - new Date(a.start_at));
+              
+            setPastEvents(personalizedPast);
+          } catch (regErr) {
+            console.error('Failed to fetch personalized past events:', regErr);
+            setPastEvents([]);
+          }
+        } else {
+          // Guests, Admins, Organizers do not see personal past events
+          setPastEvents([]);
+        }
       } catch (err) {
         setError(err);
       } finally {
@@ -34,7 +64,7 @@ const HomePage = () => {
     };
 
     fetchEvents();
-  }, []);
+  }, [isAuthenticated, role]);
 
   return (
     <PageContainer>

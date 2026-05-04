@@ -36,6 +36,15 @@ export const updateEvent = async (id, eventData) => {
   }
 };
 
+export const updateEventStatus = async (id, status) => {
+  try {
+    const response = await axiosClient.put(`/events/${id}/status`, { status });
+    return response.data?.data || response.data;
+  } catch (error) {
+    throw error.response?.data?.error || 'Failed to update event status';
+  }
+};
+
 export const deleteEvent = async (id) => {
   try {
     await axiosClient.delete(`/events/${id}`);

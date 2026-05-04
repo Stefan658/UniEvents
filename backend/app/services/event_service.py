@@ -75,6 +75,12 @@ def create_event(data):
         requires_registration=data.get('requires_registration', False),
         is_free_entry=data.get('is_free_entry', True)
     )
+    
+    # Force 'pending' for organizers, allow 'published' for admins if provided
+    if organizer.role.name == 'admin' and 'status' in data:
+        new_event.status = data['status'].lower()
+    else:
+        new_event.status = 'pending'
 
     db.session.add(new_event)
     db.session.commit()
@@ -156,7 +162,7 @@ def delete_event(event_id):
 
 
 # Define allowed statuses for validation
-ALLOWED_EVENT_STATUSES = ["draft", "pending", "active", "cancelled", "archived", "updated"]
+ALLOWED_EVENT_STATUSES = ["draft", "pending", "published", "rejected", "active", "cancelled", "archived", "updated"]
 
 
 def update_event_status(event_id, new_status):

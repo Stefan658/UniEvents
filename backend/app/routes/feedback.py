@@ -39,7 +39,14 @@ def add_feedback():
             rating=validated_data["rating"],
             comment=validated_data["comment"],
         )
-        return jsonify({"message": "Feedback created successfully.", "id": new_feedback.id}), 201 # Changed message
+        
+        # Reload to ensure relationships are available for serialization
+        full_feedback = feedback_service.get_feedback_by_id(new_feedback.id)
+        
+        return jsonify({
+            "message": "Feedback created successfully.",
+            "data": _serialize_feedback(full_feedback)
+        }), 201 # Changed message
     except ValueError as e:
         # Check if the error is a specific duplicate error, otherwise treat as generic validation error
         if str(e).startswith("FeedbackDuplicateError:"): # Changed message

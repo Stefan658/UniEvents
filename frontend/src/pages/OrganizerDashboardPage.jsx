@@ -151,6 +151,7 @@ const OrganizerDashboardPage = () => {
                 <tr className="bg-gray-50/50 text-left border-b border-gray-50">
                   <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400">Event Details</th>
                   <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400">Category</th>
+                  <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400">Status</th>
                   <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400">Date</th>
                   <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400">Participants</th>
                   <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400 text-right">Actions</th>
@@ -172,6 +173,16 @@ const OrganizerDashboardPage = () => {
                     <td className="px-8 py-5">
                       <span className="px-3 py-1 rounded-lg bg-gray-100 text-gray-600 text-[10px] font-black uppercase tracking-widest">
                         {event.category_name}
+                      </span>
+                    </td>
+                    <td className="px-8 py-5">
+                      <span className={`px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border ${
+                        event.status === 'published' || event.status === 'active' ? 'bg-green-50 text-green-700 border-green-100' :
+                        event.status === 'pending' ? 'bg-yellow-50 text-yellow-700 border-yellow-100' :
+                        event.status === 'rejected' || event.status === 'cancelled' ? 'bg-red-50 text-red-700 border-red-100' :
+                        'bg-gray-50 text-gray-700 border-gray-100'
+                      }`}>
+                        {event.status}
                       </span>
                     </td>
                     <td className="px-8 py-5">

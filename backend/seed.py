@@ -122,7 +122,7 @@ def seed_events():
             "category": "Workshop",
             "max_participants": 20,
             "requires_registration": True,
-            "status": "active"
+            "status": "published"
         },
         {
             "title": "Annual Tech Conference 2026",
@@ -134,7 +134,7 @@ def seed_events():
             "category": "Conference",
             "max_participants": 500,
             "requires_registration": True,
-            "status": "active"
+            "status": "published"
         },
         {
             "title": "Career Fair Spring 2026",
@@ -146,7 +146,7 @@ def seed_events():
             "category": "Career",
             "max_participants": 1000,
             "requires_registration": False,
-            "status": "active"
+            "status": "published"
         },
         {
             "title": "Inter-Faculty Football Tournament",
@@ -158,7 +158,7 @@ def seed_events():
             "category": "Sport",
             "max_participants": None,
             "requires_registration": False,
-            "status": "active"
+            "status": "published"
         },
         {
             "title": "Local Community Clean-up",
@@ -170,7 +170,7 @@ def seed_events():
             "category": "Volunteering",
             "max_participants": 50,
             "requires_registration": True,
-            "status": "active"
+            "status": "published"
         },
         {
             "title": "Past Hackathon: Web Innovation",
@@ -182,7 +182,7 @@ def seed_events():
             "category": "Workshop",
             "max_participants": 100,
             "requires_registration": True,
-            "status": "active"
+            "status": "published"
         }
     ]
     

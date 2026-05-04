@@ -8,6 +8,7 @@ import SectionCard from '../components/SectionCard';
 import { getEventById } from '../api/events';
 import { registerForEvent, getEventRegistrations, cancelRegistration } from '../api/registrations';
 import { getEventMaterials } from '../api/materials';
+import { submitFeedback, getEventFeedback } from '../api/feedback';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   Calendar, 
@@ -22,7 +23,8 @@ import {
   AlertCircle,
   Share2,
   ChevronLeft,
-  XCircle
+  XCircle,
+  Star
 } from 'lucide-react';
 
 const EventDetailsPage = () => {
@@ -36,6 +38,13 @@ const EventDetailsPage = () => {
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [registrationMessage, setRegistrationMessage] = useState({ type: '', text: '' });
+  
+  // Feedback states
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState('');
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [userFeedback, setUserFeedback] = useState(null);
+  const [feedbackMessage, setFeedbackMessage] = useState({ type: '', text: '' });
 
   const fetchRegistrations = async () => {
     try {
@@ -53,6 +62,20 @@ const EventDetailsPage = () => {
     }
   };
 
+  const fetchUserFeedback = async () => {
+    if (isAuthenticated && user) {
+      try {
+        const feedbacks = await getEventFeedback(id);
+        const myFeedback = Array.isArray(feedbacks) 
+          ? feedbacks.find(f => f.user_id === user.id) 
+          : null;
+        setUserFeedback(myFeedback);
+      } catch (err) {
+        console.error('Failed to fetch user feedback:', err);
+      }
+    }
+  };
+
   useEffect(() => {
     const fetchEventData = async () => {
       try {
@@ -63,7 +86,10 @@ const EventDetailsPage = () => {
         setEvent(eventData);
         setMaterials(materialsData);
         
-        await fetchRegistrations();
+        await Promise.all([
+          fetchRegistrations(),
+          fetchUserFeedback()
+        ]);
       } catch (err) {
         setError(err);
       } finally {
@@ -150,6 +176,31 @@ const EventDetailsPage = () => {
       }, 5000);
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleSubmitFeedback = async (e) => {
+    e.preventDefault();
+    if (!isAuthenticated) return;
+    
+    setFeedbackLoading(true);
+    setFeedbackMessage({ type: '', text: '' });
+    
+    try {
+      const payload = {
+        user_id: user.id,
+        event_id: parseInt(id),
+        rating: rating,
+        comment: comment
+      };
+      
+      const response = await submitFeedback(payload);
+      setUserFeedback(response);
+      setFeedbackMessage({ type: 'success', text: 'Thank you for your feedback!' });
+    } catch (err) {
+      setFeedbackMessage({ type: 'error', text: err || 'Failed to submit feedback.' });
+    } finally {
+      setFeedbackLoading(false);
     }
   };
 
@@ -364,13 +415,36 @@ const EventDetailsPage = () => {
                           )}
                         </>
                       ) : (
-                        <div className="p-4 rounded-2xl bg-blue-50 border border-blue-100 text-center">
-                          <p className="text-sm font-bold text-blue-700 leading-relaxed">
-                            {role === 'admin' ? 'Admin View' : 'Organizer View'}
-                          </p>
-                          <p className="text-xs font-medium text-blue-600 mt-1">
-                            Registration is only available for university participants.
-                          </p>
+                        <div className="space-y-4">
+                          <div className="p-4 rounded-2xl bg-blue-50 border border-blue-100 text-center">
+                            <p className="text-sm font-bold text-blue-700 leading-relaxed">
+                              {role === 'admin' ? 'Admin View' : 'Organizer View'}
+                            </p>
+                            <p className="text-xs font-medium text-blue-600 mt-1">
+                              Registration is only available for university participants.
+                            </p>
+                          </div>
+
+                          {role === 'admin' && event.status === 'pending' && (
+                            <div className="pt-4 border-t border-gray-100 space-y-3">
+                              <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 text-center mb-2">Moderation Actions</p>
+                              <Button 
+                                className="w-full !py-3 bg-green-600 hover:bg-green-700 shadow-green-100"
+                                onClick={() => handleAdminStatusUpdate('published')}
+                                isLoading={actionLoading}
+                              >
+                                <CheckCircle className="w-4 h-4 mr-2" /> Approve & Publish
+                              </Button>
+                              <Button 
+                                variant="secondary"
+                                className="w-full !py-3 text-red-600 border-red-100 hover:bg-red-50"
+                                onClick={() => handleAdminStatusUpdate('rejected')}
+                                isLoading={actionLoading}
+                              >
+                                <XCircle className="w-4 h-4 mr-2" /> Reject Event
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       )}
 
@@ -380,8 +454,87 @@ const EventDetailsPage = () => {
                       </Button>
                     </div>
                   ) : (
-                    <div className="p-4 rounded-2xl bg-gray-100 text-gray-500 text-center font-bold">
-                      Registration Closed
+                    <div className="space-y-6">
+                      <div className="p-4 rounded-2xl bg-gray-100 text-gray-500 text-center font-bold">
+                        Registration Closed
+                      </div>
+                      
+                      {/* Feedback Section for Past Events */}
+                      <div className="pt-6 border-t border-gray-100">
+                        <h4 className="text-lg font-black text-gray-900 mb-4 tracking-tight">Event Feedback</h4>
+                        
+                        {!isAuthenticated ? (
+                          <p className="text-sm font-medium text-gray-500 bg-gray-50 p-4 rounded-2xl border border-dashed border-gray-200">
+                            Please <Link to="/login" className="text-primary-600 font-bold hover:underline">log in</Link> to share your feedback about this event.
+                          </p>
+                        ) : role !== 'student' ? (
+                          <p className="text-sm font-medium text-gray-500 bg-gray-50 p-4 rounded-2xl border border-dashed border-gray-200">
+                            Feedback is available only for registered participants.
+                          </p>
+                        ) : !userRegistration ? (
+                          <p className="text-sm font-medium text-gray-500 bg-gray-50 p-4 rounded-2xl border border-dashed border-gray-200">
+                            Feedback is available only for registered participants.
+                          </p>
+                        ) : userFeedback ? (
+                          <div className="p-4 rounded-2xl bg-primary-50 border border-primary-100">
+                            <div className="flex items-center mb-2">
+                              {[...Array(5)].map((_, i) => (
+                                <Star 
+                                  key={i} 
+                                  className={`w-4 h-4 ${i < userFeedback.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} 
+                                />
+                              ))}
+                            </div>
+                            <p className="text-xs font-black uppercase tracking-widest text-primary-700 mb-2">Your Feedback</p>
+                            <p className="text-sm font-medium text-gray-700 italic">"{userFeedback.comment || 'No comment provided.'}"</p>
+                          </div>
+                        ) : (
+                          <form onSubmit={handleSubmitFeedback} className="space-y-4">
+                            <div>
+                              <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">Rating</label>
+                              <div className="flex space-x-2">
+                                {[1, 2, 3, 4, 5].map((s) => (
+                                  <button
+                                    key={s}
+                                    type="button"
+                                    onClick={() => setRating(s)}
+                                    className="focus:outline-none transition-transform active:scale-90"
+                                  >
+                                    <Star 
+                                      className={`w-6 h-6 ${s <= rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200'}`} 
+                                    />
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">Your Thoughts</label>
+                              <textarea
+                                value={comment}
+                                onChange={(e) => setComment(e.target.value)}
+                                placeholder="What did you think of the event?"
+                                className="w-full p-4 rounded-2xl bg-gray-50 border border-gray-100 text-sm font-medium focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all min-h-[100px]"
+                              />
+                            </div>
+                            <Button 
+                              type="submit" 
+                              className="w-full !py-3 shadow-lg shadow-primary-100"
+                              isLoading={feedbackLoading}
+                            >
+                              Submit Feedback
+                            </Button>
+                          </form>
+                        )}
+                        
+                        {feedbackMessage.text && (
+                          <div className={`mt-4 p-4 rounded-2xl flex items-start space-x-3 ${
+                            feedbackMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                          }`}>
+                            {feedbackMessage.type === 'success' ? <CheckCircle className="w-5 h-5 shrink-0" /> : <AlertCircle className="w-5 h-5 shrink-0" />}
+                            <p className="text-sm font-bold">{feedbackMessage.text}</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
 
@@ -404,16 +557,18 @@ const EventDetailsPage = () => {
             </div>
           </SectionCard>
 
-          <div className="bg-primary-600 rounded-[2rem] p-8 text-white shadow-soft-lg shadow-primary-200 relative overflow-hidden group">
-            <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-white/10 rounded-full group-hover:scale-110 transition-transform duration-500"></div>
-            <h4 className="text-xl font-black mb-2 relative z-10">Need help?</h4>
-            <p className="text-primary-100 font-medium text-sm mb-6 relative z-10 leading-relaxed">
-              If you have any questions about this event, please contact the organizer or visit our help center.
-            </p>
-            <Link to={`/support?eventId=${id}`} className="inline-flex items-center text-sm font-bold bg-white text-primary-600 px-6 py-2.5 rounded-xl hover:bg-primary-50 transition-colors relative z-10">
-              Contact Us
-            </Link>
-          </div>
+          {role === 'student' && (
+            <div className="bg-primary-600 rounded-[2rem] p-8 text-white shadow-soft-lg shadow-primary-200 relative overflow-hidden group">
+              <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-white/10 rounded-full group-hover:scale-110 transition-transform duration-500"></div>
+              <h4 className="text-xl font-black mb-2 relative z-10">Need help?</h4>
+              <p className="text-primary-100 font-medium text-sm mb-6 relative z-10 leading-relaxed">
+                If you have any questions about this event, please contact the organizer or visit our help center.
+              </p>
+              <Link to={`/support?eventId=${id}`} className="inline-flex items-center text-sm font-bold bg-white text-primary-600 px-6 py-2.5 rounded-xl hover:bg-primary-50 transition-colors relative z-10">
+                Contact Us
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </PageContainer>

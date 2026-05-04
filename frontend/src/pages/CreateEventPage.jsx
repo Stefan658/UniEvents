@@ -19,6 +19,7 @@ const CreateEventPage = () => {
         ...formData,
         organizer_id: user.id
       });
+      alert('Event submitted for admin approval.');
       navigate('/organizer');
     } catch (err) {
       alert(err);

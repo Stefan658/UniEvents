@@ -1,14 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import PageContainer from '../components/PageContainer';
 import SectionCard from '../components/SectionCard';
 import Button from '../components/Button';
 import InputField from '../components/InputField';
-import { Mail, MessageSquare, Send, ChevronLeft, Sparkles, HelpCircle } from 'lucide-react';
+import Loader from '../components/Loader';
+import ErrorMessage from '../components/ErrorMessage';
+import { Mail, MessageSquare, Send, ChevronLeft, Sparkles, HelpCircle, ExternalLink } from 'lucide-react';
+import { getEventById } from '../api/events';
 
 const SupportPage = () => {
   const [searchParams] = useSearchParams();
   const eventId = searchParams.get('eventId');
+  
+  const [event, setEvent] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -18,6 +25,30 @@ const SupportPage = () => {
   });
   
   const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    const fetchEvent = async () => {
+      if (!eventId) return;
+      
+      setLoading(true);
+      try {
+        const eventData = await getEventById(eventId);
+        setEvent(eventData);
+        setFormData(prev => ({
+          ...prev,
+          subject: `Question about: ${eventData.title}`,
+          message: `Hello,\n\nI have a question regarding the event "${eventData.title}".\n\n[Your question here]\n\n---\nEvent Details:\nTitle: ${eventData.title}\nDate: ${new Date(eventData.start_at).toLocaleString()}`
+        }));
+      } catch (err) {
+        console.error('Error fetching event for support context:', err);
+        setError('Could not load event details, but you can still send your request.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEvent();
+  }, [eventId]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -33,12 +64,23 @@ const SupportPage = () => {
   return (
     <PageContainer>
       <div className="max-w-3xl mx-auto">
-        <Link to="/" className="inline-flex items-center text-gray-500 hover:text-primary-600 font-bold text-sm mb-8 group transition-colors">
-          <div className="bg-white p-1.5 rounded-lg border border-gray-100 mr-2 group-hover:bg-primary-50 group-hover:border-primary-100 transition-all">
-            <ChevronLeft className="w-4 h-4" />
-          </div>
-          Back to Events
-        </Link>
+        <div className="flex flex-wrap items-center gap-8 mb-8">
+          <Link to="/" className="inline-flex items-center text-gray-500 hover:text-primary-600 font-bold text-sm group transition-colors">
+            <div className="bg-white p-1.5 rounded-lg border border-gray-100 mr-2 group-hover:bg-primary-50 group-hover:border-primary-100 transition-all">
+              <ChevronLeft className="w-4 h-4" />
+            </div>
+            Back to All Events
+          </Link>
+          
+          {eventId && event && (
+            <Link to={`/events/${eventId}`} className="inline-flex items-center text-blue-600 hover:text-blue-700 font-bold text-sm group transition-colors">
+              <div className="bg-white p-1.5 rounded-lg border border-blue-100 mr-2 group-hover:bg-blue-50 group-hover:border-blue-200 transition-all">
+                <ExternalLink className="w-4 h-4" />
+              </div>
+              Back to the Current Event
+            </Link>
+          )}
+        </div>
 
         <div className="relative mb-12 text-center">
           <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-primary-50 text-primary-700 text-xs font-black uppercase tracking-widest mb-4 border border-primary-100/50">
@@ -58,7 +100,10 @@ const SupportPage = () => {
             </div>
             <h2 className="text-2xl font-black text-gray-900 mb-4 tracking-tight">Message Prepared!</h2>
             <p className="text-gray-600 font-medium mb-8 max-w-md mx-auto">
-              Your message has been captured. In a production version, this would be sent directly to the "Ștefan cel Mare" University events office.
+              {eventId 
+                ? "Your message was prepared for the event organizer. Backend email delivery will be enabled in a later step."
+                : "Your message has been captured. In a production version, this would be sent directly to the \"Ștefan cel Mare\" University events office."
+              }
             </p>
             <div className="flex justify-center space-x-4">
               <Button onClick={() => setSubmitted(false)} variant="secondary">
@@ -70,13 +115,32 @@ const SupportPage = () => {
             </div>
           </SectionCard>
         ) : (
-          <SectionCard title="Send a Message">
-            {eventId && (
-              <div className="mb-8 p-4 rounded-2xl bg-blue-50 border border-blue-100 flex items-center space-x-3">
-                <Sparkles className="w-5 h-5 text-blue-600 shrink-0" />
-                <p className="text-sm font-bold text-blue-700">
-                  Support request related to Event #{eventId}
-                </p>
+          <SectionCard title={event ? "Contact Organizer" : "Send a Message"}>
+            {loading && (
+              <div className="mb-8 flex justify-center">
+                <Loader size="sm" />
+              </div>
+            )}
+            
+            {error && <ErrorMessage message={error} className="mb-8" />}
+
+            {eventId && !loading && (
+              <div className="mb-8 p-4 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <Sparkles className="w-5 h-5 text-blue-600 shrink-0" />
+                  <p className="text-sm font-medium text-blue-700">
+                    Support request related to {event ? (
+                      <span className="font-black text-blue-800">{event.title}</span>
+                    ) : (
+                      <span className="font-black text-blue-800">Event #{eventId}</span>
+                    )}
+                  </p>
+                </div>
+                {event && (
+                  <Link to={`/events/${eventId}`} className="text-xs font-black text-blue-600 uppercase tracking-wider hover:underline">
+                    View Event
+                  </Link>
+                )}
               </div>
             )}
 
@@ -118,9 +182,9 @@ const SupportPage = () => {
                   name="message"
                   value={formData.message}
                   onChange={handleChange}
-                  rows="6"
+                  rows="8"
                   required
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 font-medium placeholder:text-gray-400"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 font-medium placeholder:text-gray-400 whitespace-pre-wrap"
                   placeholder="Type your message here..."
                 ></textarea>
               </div>
@@ -128,32 +192,27 @@ const SupportPage = () => {
               <div className="pt-4">
                 <Button type="submit" className="w-full !py-4 shadow-primary-200 shadow-xl">
                   <Send className="w-4 h-4 mr-2" />
-                  Send Message
+                  {event ? 'Send Message to Organizer' : 'Send Message'}
                 </Button>
               </div>
             </form>
           </SectionCard>
         )}
 
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white p-6 rounded-3xl border border-gray-100/50 shadow-soft flex items-start space-x-4">
-            <div className="bg-primary-50 p-3 rounded-2xl text-primary-600">
-              <Mail className="w-6 h-6" />
-            </div>
-            <div>
-              <h4 className="font-bold text-gray-900 mb-1">Email Us</h4>
-              <p className="text-sm text-gray-500 font-medium">events@usv.ro</p>
-            </div>
-          </div>
-          <div className="bg-white p-6 rounded-3xl border border-gray-100/50 shadow-soft flex items-start space-x-4">
-            <div className="bg-blue-50 p-3 rounded-2xl text-blue-600">
+        <div className="mt-12 flex justify-center">
+          <button 
+            onClick={() => alert('AI Assistant coming soon')}
+            className="bg-white p-6 rounded-3xl border border-gray-100/50 shadow-soft flex items-start space-x-4 text-left hover:bg-gray-50 transition-all active:scale-95 group max-w-sm w-full"
+          >
+            <div className="bg-blue-50 p-3 rounded-2xl text-blue-600 group-hover:bg-blue-100 transition-colors">
               <MessageSquare className="w-6 h-6" />
             </div>
             <div>
               <h4 className="font-bold text-gray-900 mb-1">Live Chat</h4>
-              <p className="text-sm text-gray-500 font-medium">Available Mon-Fri, 9:00 - 17:00</p>
+              <p className="text-sm text-gray-500 font-medium mb-1">Available Mon-Fri, 9:00 - 17:00</p>
+              <span className="text-[10px] font-black uppercase tracking-wider text-blue-600/60 group-hover:text-blue-600 transition-colors">Launch Assistant</span>
             </div>
-          </div>
+          </button>
         </div>
       </div>
     </PageContainer>
