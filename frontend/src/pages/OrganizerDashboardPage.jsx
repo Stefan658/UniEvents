@@ -7,13 +7,15 @@ import Loader from '../components/Loader';
 import ErrorMessage from '../components/ErrorMessage';
 import { getAllEvents, deleteEvent } from '../api/events';
 import { getEventRegistrations } from '../api/registrations';
+import { getEventFeedbackSummary } from '../api/feedback';
 import { useAuth } from '../contexts/AuthContext';
-import { Plus, Edit2, Trash2, Calendar, MapPin, Users, ExternalLink } from 'lucide-react';
+import { Plus, Edit2, Trash2, Calendar, MapPin, Users, ExternalLink, Star } from 'lucide-react';
 
 const OrganizerDashboardPage = () => {
   const { user } = useAuth();
   const [events, setEvents] = useState([]);
   const [participantCounts, setParticipantCounts] = useState({});
+  const [feedbackSummaries, setFeedbackSummaries] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -24,18 +26,24 @@ const OrganizerDashboardPage = () => {
         const myEvents = allEvents.filter(event => event.organizer_id === user.id);
         setEvents(myEvents);
 
-        // Fetch participant counts for each event
+        // Fetch participant counts and feedback summaries for each event
         const counts = {};
+        const summaries = {};
         await Promise.all(myEvents.map(async (event) => {
           try {
-            const registrations = await getEventRegistrations(event.id);
+            const [registrations, summary] = await Promise.all([
+              getEventRegistrations(event.id),
+              getEventFeedbackSummary(event.id)
+            ]);
             counts[event.id] = Array.isArray(registrations) ? registrations.length : 0;
+            summaries[event.id] = summary;
           } catch (err) {
-            console.error(`Failed to fetch registrations for event ${event.id}:`, err);
+            console.error(`Failed to fetch data for event ${event.id}:`, err);
             counts[event.id] = 0;
           }
         }));
         setParticipantCounts(counts);
+        setFeedbackSummaries(summaries);
       } catch (err) {
         setError(err);
       } finally {
@@ -53,8 +61,13 @@ const OrganizerDashboardPage = () => {
       try {
         await deleteEvent(id);
         setEvents(events.filter(event => event.id !== id));
-        // Remove from counts too
+        // Remove from counts and summaries too
         setParticipantCounts(prev => {
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
+        setFeedbackSummaries(prev => {
           const next = { ...prev };
           delete next[id];
           return next;
@@ -77,22 +90,18 @@ const OrganizerDashboardPage = () => {
   const totalEvents = events.length;
   const activeRegistrations = Object.values(participantCounts).reduce((acc, count) => acc + count, 0);
   
-  // Capacity utilization
-  // Only include events that have a max_participants limit
-  const totalParticipantsInLimitedEvents = events.reduce((acc, event) => {
-    if (event.max_participants) {
-      return acc + (participantCounts[event.id] || 0);
-    }
-    return acc;
-  }, 0);
-  
-  const totalCapacityOfLimitedEvents = events.reduce((acc, event) => {
-    return acc + (event.max_participants || 0);
-  }, 0);
+  // Average rating across all events that have feedback
+  const eventsWithFeedback = Object.values(feedbackSummaries).filter(s => 
+    s && 
+    s.total_feedbacks > 0 && 
+    s.average_rating !== null && 
+    s.average_rating !== undefined &&
+    !isNaN(Number(s.average_rating))
+  );
 
-  const capacityUtilization = totalCapacityOfLimitedEvents > 0 
-    ? Math.round((totalParticipantsInLimitedEvents / totalCapacityOfLimitedEvents) * 100) 
-    : 0;
+  const avgRating = eventsWithFeedback.length > 0
+    ? (eventsWithFeedback.reduce((acc, s) => acc + Number(s.average_rating), 0) / eventsWithFeedback.length).toFixed(1)
+    : '0.0';
 
   return (
     <PageContainer>
@@ -124,8 +133,18 @@ const OrganizerDashboardPage = () => {
           </p>
         </div>
         <div className="bg-white p-8 rounded-[2rem] shadow-soft border border-gray-100/50">
-          <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-2">Capacity Utilization</p>
-          <p className="text-4xl font-black text-primary-600 tracking-tighter">{capacityUtilization}%</p>
+          <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-2">Avg Platform Rating</p>
+          <div className="flex items-center">
+            <p className="text-4xl font-black text-primary-600 tracking-tighter mr-3">{avgRating}</p>
+            <div className="flex">
+              {[...Array(5)].map((_, i) => (
+                <Star 
+                  key={i} 
+                  className={`w-4 h-4 ${i < Math.round(parseFloat(avgRating)) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200'}`} 
+                />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -150,10 +169,9 @@ const OrganizerDashboardPage = () => {
               <thead>
                 <tr className="bg-gray-50/50 text-left border-b border-gray-50">
                   <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400">Event Details</th>
-                  <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400">Category</th>
                   <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400">Status</th>
-                  <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400">Date</th>
-                  <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400">Participants</th>
+                  <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400 text-center">Participants</th>
+                  <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400 text-center">Feedback</th>
                   <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400 text-right">Actions</th>
                 </tr>
               </thead>
@@ -164,16 +182,11 @@ const OrganizerDashboardPage = () => {
                       <div className="flex items-center">
                         <div>
                           <p className="font-bold text-gray-900 group-hover:text-primary-600 transition-colors">{event.title}</p>
-                          <div className="flex items-center text-xs text-gray-400 font-medium mt-1">
-                            <MapPin className="w-3 h-3 mr-1" /> {event.location}
+                          <div className="flex items-center text-[10px] font-black uppercase tracking-widest text-gray-400 mt-1">
+                            {event.category_name} • {formatDate(event.start_at)}
                           </div>
                         </div>
                       </div>
-                    </td>
-                    <td className="px-8 py-5">
-                      <span className="px-3 py-1 rounded-lg bg-gray-100 text-gray-600 text-[10px] font-black uppercase tracking-widest">
-                        {event.category_name}
-                      </span>
                     </td>
                     <td className="px-8 py-5">
                       <span className={`px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border ${
@@ -185,14 +198,24 @@ const OrganizerDashboardPage = () => {
                         {event.status}
                       </span>
                     </td>
-                    <td className="px-8 py-5">
-                      <p className="text-sm font-bold text-gray-700">{formatDate(event.start_at)}</p>
-                    </td>
-                    <td className="px-8 py-5">
-                      <div className="flex items-center text-sm font-bold text-gray-700">
-                        <Users className="w-4 h-4 mr-2 text-gray-300" />
-                        {participantCounts[event.id] || 0} / {event.max_participants || '∞'}
+                    <td className="px-8 py-5 text-center">
+                      <div className="flex flex-col items-center">
+                        <span className="text-sm font-bold text-gray-900">{participantCounts[event.id] || 0}</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Registered</span>
                       </div>
+                    </td>
+                    <td className="px-8 py-5 text-center">
+                      {feedbackSummaries[event.id] && feedbackSummaries[event.id].total_feedbacks > 0 ? (
+                        <div className="flex flex-col items-center">
+                          <div className="flex items-center space-x-1">
+                            <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                            <span className="text-sm font-bold text-gray-900">{feedbackSummaries[event.id].average_rating}</span>
+                          </div>
+                          <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">{feedbackSummaries[event.id].total_feedbacks} reviews</span>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-300">No feedback</span>
+                      )}
                     </td>
                     <td className="px-8 py-5 text-right">
                       <div className="flex items-center justify-end space-x-2">

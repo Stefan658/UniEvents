@@ -5,10 +5,10 @@ import Loader from '../components/Loader';
 import ErrorMessage from '../components/ErrorMessage';
 import Button from '../components/Button';
 import SectionCard from '../components/SectionCard';
-import { getEventById } from '../api/events';
+import { getEventById, updateEventStatus } from '../api/events';
 import { registerForEvent, getEventRegistrations, cancelRegistration } from '../api/registrations';
 import { getEventMaterials } from '../api/materials';
-import { submitFeedback, getEventFeedback } from '../api/feedback';
+import { submitFeedback, getEventFeedback, getEventFeedbackSummary } from '../api/feedback';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   Calendar, 
@@ -47,6 +47,8 @@ const EventDetailsPage = () => {
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [userFeedback, setUserFeedback] = useState(null);
   const [feedbackMessage, setFeedbackMessage] = useState({ type: '', text: '' });
+  const [feedbackSummary, setFeedbackSummary] = useState(null);
+  const [allFeedback, setAllFeedback] = useState([]);
 
   const fetchRegistrations = async () => {
     try {
@@ -78,6 +80,19 @@ const EventDetailsPage = () => {
     }
   };
 
+  const fetchFeedbackData = async () => {
+    try {
+      const [summary, feedbackList] = await Promise.all([
+        getEventFeedbackSummary(id),
+        getEventFeedback(id)
+      ]);
+      setFeedbackSummary(summary);
+      setAllFeedback(Array.isArray(feedbackList) ? feedbackList : []);
+    } catch (err) {
+      console.error('Failed to fetch feedback data:', err);
+    }
+  };
+
   useEffect(() => {
     const fetchEventData = async () => {
       try {
@@ -90,7 +105,8 @@ const EventDetailsPage = () => {
         
         await Promise.all([
           fetchRegistrations(),
-          fetchUserFeedback()
+          fetchUserFeedback(),
+          fetchFeedbackData()
         ]);
       } catch (err) {
         setError(err);
@@ -204,6 +220,48 @@ const EventDetailsPage = () => {
     } finally {
       setFeedbackLoading(false);
     }
+  };
+
+  const handleAdminStatusUpdate = async (status) => {
+    if (!window.confirm(`Are you sure you want to ${status === 'published' ? 'approve' : 'reject'} this event?`)) return;
+
+    setActionLoading(true);
+    setRegistrationMessage({ type: '', text: '' });
+    try {
+      const updatedEvent = await updateEventStatus(id, status);
+      setEvent(updatedEvent);
+      setRegistrationMessage({ 
+        type: 'success', 
+        text: `Event ${status === 'published' ? 'approved and published' : 'rejected'} successfully.` 
+      });
+
+      // Auto-hide message after 5 seconds
+      setTimeout(() => {
+        setRegistrationMessage({ type: '', text: '' });
+      }, 5000);
+    } catch (err) {
+      setRegistrationMessage({ type: 'error', text: err || 'Failed to update event status.' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleShareEvent = async () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(window.location.href);
+        setRegistrationMessage({ type: 'success', text: 'Event link copied to clipboard.' });
+      } else {
+        throw new Error('Clipboard API not available');
+      }
+    } catch (err) {
+      setRegistrationMessage({ type: 'error', text: 'Could not copy the link. Please copy it manually from the address bar.' });
+    }
+
+    // Auto-hide message after 5 seconds
+    setTimeout(() => {
+      setRegistrationMessage({ type: '', text: '' });
+    }, 5000);
   };
 
   const formatDate = (dateString) => {
@@ -387,6 +445,85 @@ const EventDetailsPage = () => {
               </div>
             </SectionCard>
           )}
+
+          {/* Community Feedback Section */}
+          <SectionCard title="Community Feedback" className="!bg-gradient-to-br from-white to-gray-50/30">
+            {feedbackSummary && feedbackSummary.total_feedbacks > 0 ? (
+              <div className="space-y-8">
+                <div className="flex flex-col md:flex-row md:items-center gap-6 p-6 rounded-[2rem] bg-gray-50/50 border border-gray-100">
+                  <div className="text-center md:border-r md:border-gray-200 md:pr-10">
+                    <p className="text-5xl font-black text-gray-900 tracking-tighter mb-1">
+                      {feedbackSummary.average_rating || '0.0'}
+                    </p>
+                    <div className="flex justify-center mb-2">
+                      {[...Array(5)].map((_, i) => (
+                        <Star 
+                          key={i} 
+                          className={`w-4 h-4 ${i < Math.round(feedbackSummary.average_rating || 0) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} 
+                        />
+                      ))}
+                    </div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Average Rating</p>
+                  </div>
+                  
+                  <div className="grid grid-cols-3 flex-grow gap-4 text-center md:text-left md:pl-4">
+                    <div>
+                      <p className="text-2xl font-black text-gray-900">{feedbackSummary.total_feedbacks}</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Total Reviews</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-black text-gray-900">{feedbackSummary.max_rating || '-'}</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Highest</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-black text-gray-900">{feedbackSummary.min_rating || '-'}</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Lowest</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-4 ml-1">Recent Comments</h4>
+                  {allFeedback.filter(f => f.comment).length > 0 ? (
+                    allFeedback.filter(f => f.comment).map((f) => (
+                      <div key={f.id} className="p-6 rounded-2xl bg-white border border-gray-100 shadow-sm">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center space-x-2">
+                            <div className="bg-primary-50 p-1.5 rounded-lg">
+                              <User className="w-3.5 h-3.5 text-primary-600" />
+                            </div>
+                            <span className="text-sm font-bold text-gray-900">{f.user_full_name || 'Participant'}</span>
+                          </div>
+                          <div className="flex">
+                            {[...Array(5)].map((_, i) => (
+                              <Star 
+                                key={i} 
+                                className={`w-3 h-3 ${i < f.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200'}`} 
+                              />
+                            ))}
+                          </div>
+                        </div>
+                        <p className="text-gray-600 text-sm font-medium leading-relaxed italic">"{f.comment}"</p>
+                        <p className="text-[10px] text-gray-400 mt-3 font-bold uppercase tracking-tighter">
+                          {new Date(f.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-400 font-medium italic ml-1">No written reviews yet.</p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-12 px-6">
+                <div className="bg-gray-50 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Star className="w-8 h-8 text-gray-200" />
+                </div>
+                <p className="text-gray-400 font-bold text-lg tracking-tight">No feedback yet</p>
+                <p className="text-gray-400 text-sm font-medium mt-1">Be the first to share your experience after the event!</p>
+              </div>
+            )}
+          </SectionCard>
         </div>
 
         {/* Right Column: Sidebar */}
@@ -487,7 +624,7 @@ const EventDetailsPage = () => {
                         </div>
                       )}
 
-                      <Button variant="ghost" className="w-full">
+                      <Button variant="ghost" className="w-full" onClick={handleShareEvent}>
                         <Share2 className="w-4 h-4 mr-2" />
                         Share Event
                       </Button>

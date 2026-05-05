@@ -17,3 +17,12 @@ export const getEventFeedback = async (eventId) => {
     throw error.response?.data?.error || 'Failed to fetch feedback';
   }
 };
+
+export const getEventFeedbackSummary = async (eventId) => {
+  try {
+    const response = await axiosClient.get(`/events/${eventId}/feedback/summary`);
+    return response.data?.data || response.data;
+  } catch (error) {
+    throw error.response?.data?.error || 'Failed to fetch feedback summary';
+  }
+};
