@@ -20,6 +20,8 @@ class Event(db.Model):
     registration_deadline = db.Column(db.DateTime, nullable=True)
     requires_registration = db.Column(db.Boolean, default=False, nullable=False)
     is_free_entry = db.Column(db.Boolean, default=True, nullable=False)
+    online_platform = db.Column(db.String(50), nullable=True)
+    online_meeting_url = db.Column(db.String(500), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.utcnow)
 

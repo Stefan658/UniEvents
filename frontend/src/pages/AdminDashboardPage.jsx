@@ -134,7 +134,7 @@ const AdminDashboardPage = () => {
           <Shield className="w-3 h-3 mr-2" />
           System Administration
         </div>
-        <h1 className="text-4xl font-black text-gray-900 tracking-tighter">Admin Panel</h1>
+        <h1 className="text-4xl font-semibold font-black text-gray-900 tracking-tighter">Admin Panel</h1>
         <p className="text-gray-500 font-medium mt-2">Manage event approvals and platform integrity.</p>
       </div>
 
@@ -167,7 +167,7 @@ const AdminDashboardPage = () => {
         {/* Events Moderation Section */}
         <SectionCard className="!p-0 overflow-hidden">
           <div className="bg-gray-50/50 border-b border-gray-100 px-8 py-4 flex flex-wrap gap-4 items-center justify-between">
-            <h2 className="text-xl font-black text-gray-900 tracking-tight">Event Moderation</h2>
+            <h2 className="text-xl font-semibold font-black text-gray-900 tracking-tight">Event Moderation</h2>
             <div className="flex bg-white p-1 rounded-xl border border-gray-200">
               {['pending', 'published', 'rejected'].map((tab) => (
                 <button

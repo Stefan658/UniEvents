@@ -66,7 +66,7 @@ const MyRegistrationsPage = () => {
         <div className="inline-flex items-center px-3 py-1 rounded-lg bg-primary-50 text-primary-700 text-[10px] font-black uppercase tracking-widest mb-3 border border-primary-100">
           Participant Portal
         </div>
-        <h1 className="text-4xl font-black text-gray-900 tracking-tighter">My Registrations</h1>
+        <h1 className="text-4xl font-semibold font-black text-gray-900 tracking-tighter">My Registrations</h1>
         <p className="text-gray-500 font-medium mt-2">Manage your upcoming event participations.</p>
       </div>
 
@@ -101,7 +101,7 @@ const MyRegistrationsPage = () => {
                   </p>
                 </div>
                 
-                <h3 className="text-xl font-black text-gray-900 group-hover:text-primary-600 transition-colors mb-4 leading-tight">
+                <h3 className="text-xl font-semibold font-black text-gray-900 group-hover:text-primary-600 transition-colors mb-4 leading-tight">
                   {reg.event_title}
                 </h3>
                 

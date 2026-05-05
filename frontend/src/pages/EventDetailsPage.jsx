@@ -24,7 +24,9 @@ import {
   Share2,
   ChevronLeft,
   XCircle,
-  Star
+  Star,
+  Globe,
+  ExternalLink
 } from 'lucide-react';
 
 const EventDetailsPage = () => {
@@ -271,7 +273,7 @@ const EventDetailsPage = () => {
                 )}
               </div>
 
-              <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tighter leading-tight mb-8">
+              <h1 className="text-4xl md:text-5xl font-semibold font-black text-gray-900 tracking-tighter leading-tight mb-8">
                 {event.title}
               </h1>
 
@@ -316,13 +318,50 @@ const EventDetailsPage = () => {
               </div>
 
               <div className="prose prose-blue max-w-none">
-                <h3 className="text-xl font-black text-gray-900 mb-4 tracking-tight">About this event</h3>
+                <h3 className="text-xl font-semibold font-black text-gray-900 mb-4 tracking-tight">About this event</h3>
                 <div className="text-gray-600 leading-relaxed font-medium whitespace-pre-wrap text-lg">
                   {event.description}
                 </div>
               </div>
             </div>
           </div>
+
+          {/* Online Access Section */}
+          {(event.participation_type === 'online' || event.participation_type === 'hybrid') && event.online_meeting_url && (
+            <div className="bg-primary-600 rounded-[2rem] p-8 text-white shadow-soft-lg shadow-primary-200 relative overflow-hidden group">
+              <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-white/10 rounded-full group-hover:scale-110 transition-transform duration-500"></div>
+              <div className="relative z-10">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="bg-white/20 p-2 rounded-xl">
+                    <Globe className="w-5 h-5 text-white" />
+                  </div>
+                  <h4 className="text-xl font-black">Online Access</h4>
+                </div>
+                
+                <p className="text-blue-100 font-medium text-sm mb-6 leading-relaxed">
+                  This event has an online component on <span className="font-bold text-white capitalize">{event.online_platform}</span>.
+                </p>
+
+                {(role === 'admin' || role === 'organizer' || !event.requires_registration || userRegistration) ? (
+                  <a 
+                    href={event.online_meeting_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center w-full bg-white text-blue-600 font-bold py-3 px-6 rounded-xl hover:bg-blue-50 transition-all shadow-lg shadow-blue-900/20 active:scale-[0.98]"
+                  >
+                    Join Online Event
+                    <ExternalLink className="w-4 h-4 ml-2" />
+                  </a>
+                ) : (
+                  <div className="bg-blue-700/50 backdrop-blur-sm border border-blue-400/30 rounded-2xl p-4">
+                    <p className="text-xs font-bold text-blue-100 text-center">
+                      Register to unlock the meeting link
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {materials.length > 0 && (
             <SectionCard title="Event Materials" className="!bg-gradient-to-br from-white to-gray-50/30">
@@ -351,8 +390,8 @@ const EventDetailsPage = () => {
         </div>
 
         {/* Right Column: Sidebar */}
-        <div className="space-y-8">
-          <SectionCard className="!p-0 overflow-hidden sticky top-24">
+        <div className="space-y-8 sticky top-24 self-start">
+          <SectionCard className="!p-0 overflow-hidden">
             <div className="p-8 pb-4">
               <h3 className="text-2xl font-black text-gray-900 tracking-tight mb-2">Registration</h3>
               <p className="text-gray-500 font-medium text-sm">Join this event to get full access and updates.</p>
@@ -461,7 +500,7 @@ const EventDetailsPage = () => {
                       
                       {/* Feedback Section for Past Events */}
                       <div className="pt-6 border-t border-gray-100">
-                        <h4 className="text-lg font-black text-gray-900 mb-4 tracking-tight">Event Feedback</h4>
+                        <h4 className="text-lg font-semibold font-black text-gray-900 mb-4 tracking-tight">Event Feedback</h4>
                         
                         {!isAuthenticated ? (
                           <p className="text-sm font-medium text-gray-500 bg-gray-50 p-4 rounded-2xl border border-dashed border-gray-200">
@@ -558,13 +597,13 @@ const EventDetailsPage = () => {
           </SectionCard>
 
           {role === 'student' && (
-            <div className="bg-primary-600 rounded-[2rem] p-8 text-white shadow-soft-lg shadow-primary-200 relative overflow-hidden group">
-              <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-white/10 rounded-full group-hover:scale-110 transition-transform duration-500"></div>
+            <div className="bg-blue-900 rounded-[2rem] p-8 text-white shadow-soft-lg shadow-blue-200 relative overflow-hidden group">
+              <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-white/5 rounded-full group-hover:scale-110 transition-transform duration-500"></div>
               <h4 className="text-xl font-black mb-2 relative z-10">Need help?</h4>
-              <p className="text-primary-100 font-medium text-sm mb-6 relative z-10 leading-relaxed">
+              <p className="text-blue-100/80 font-medium text-sm mb-6 relative z-10 leading-relaxed">
                 If you have any questions about this event, please contact the organizer or visit our help center.
               </p>
-              <Link to={`/support?eventId=${id}`} className="inline-flex items-center text-sm font-bold bg-white text-primary-600 px-6 py-2.5 rounded-xl hover:bg-primary-50 transition-colors relative z-10">
+              <Link to={`/support?eventId=${id}`} className="inline-flex items-center text-sm font-bold bg-white text-blue-900 px-6 py-2.5 rounded-xl hover:bg-blue-50 transition-colors relative z-10">
                 Contact Us
               </Link>
             </div>

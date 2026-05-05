@@ -44,6 +44,8 @@ def _serialize_event(event):
         else None,
         "requires_registration": event.requires_registration,
         "is_free_entry": event.is_free_entry,
+        "online_platform": event.online_platform,
+        "online_meeting_url": event.online_meeting_url,
         "created_at": event.created_at.isoformat(),
         "updated_at": event.updated_at.isoformat() if event.updated_at else None,
         "organizer_id": event.organizer_id,

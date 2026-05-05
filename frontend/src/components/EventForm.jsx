@@ -19,6 +19,8 @@ const EventForm = ({
     location: '',
     category_id: '',
     participation_type: 'on-site',
+    online_platform: '',
+    online_meeting_url: '',
     max_participants: '',
     requires_registration: false,
     is_free_entry: true
@@ -58,6 +60,8 @@ const EventForm = ({
         location: initialData.location || '',
         category_id: initialData.category_id || '',
         participation_type: initialData.participation_type || 'on-site',
+        online_platform: initialData.online_platform || '',
+        online_meeting_url: initialData.online_meeting_url || '',
         max_participants: initialData.max_participants || '',
         requires_registration: !!initialData.requires_registration,
         is_free_entry: !!initialData.is_free_entry
@@ -67,10 +71,20 @@ const EventForm = ({
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
+    setFormData(prev => {
+      const newState = {
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value
+      };
+      
+      // Clear online fields if switching to on-site
+      if (name === 'participation_type' && value === 'on-site') {
+        newState.online_platform = '';
+        newState.online_meeting_url = '';
+      }
+      
+      return newState;
+    });
   };
 
   const handleFormSubmit = (e) => {
@@ -191,6 +205,45 @@ const EventForm = ({
           onChange={handleChange}
           placeholder="Leave empty for unlimited"
         />
+
+        {formData.participation_type !== 'on-site' && (
+          <>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 tracking-tight mb-2">
+                Online Platform <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <select
+                  name="online_platform"
+                  value={formData.online_platform}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 font-medium appearance-none"
+                >
+                  <option value="">Select a platform</option>
+                  <option value="zoom">Zoom</option>
+                  <option value="google-meet">Google Meet</option>
+                  <option value="ms-teams">Microsoft Teams</option>
+                  <option value="discord">Discord</option>
+                  <option value="other">Other</option>
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-gray-400">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                </div>
+              </div>
+            </div>
+
+            <InputField
+              label="Meeting Link"
+              name="online_meeting_url"
+              type="url"
+              value={formData.online_meeting_url}
+              onChange={handleChange}
+              placeholder="https://..."
+              required
+            />
+          </>
+        )}
 
         <div className="flex flex-col space-y-4 pt-4">
           <label className="flex items-center space-x-3 cursor-pointer group">

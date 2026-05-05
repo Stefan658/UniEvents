@@ -39,7 +39,7 @@ const CreateEventPage = () => {
       </button>
 
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-black text-gray-900 mb-8">Create New Event</h1>
+        <h1 className="text-3xl font-semibold font-black text-gray-900 mb-8">Create New Event</h1>
         
         <SectionCard>
           <EventForm 

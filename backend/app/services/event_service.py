@@ -73,7 +73,9 @@ def create_event(data):
         max_participants=max_participants,
         registration_deadline=registration_deadline,
         requires_registration=data.get('requires_registration', False),
-        is_free_entry=data.get('is_free_entry', True)
+        is_free_entry=data.get('is_free_entry', True),
+        online_platform=data.get('online_platform'),
+        online_meeting_url=data.get('online_meeting_url')
     )
     
     # Force 'pending' for organizers, allow 'published' for admins if provided
@@ -116,7 +118,8 @@ def update_event(event_id, data):
     updatable_fields = [
         'title', 'description', 'location', 'participation_type',
         'registration_link', 'qr_code_url', 'status', 'max_participants',
-        'requires_registration', 'is_free_entry'
+        'requires_registration', 'is_free_entry', 'online_platform',
+        'online_meeting_url'
     ]
     for field in updatable_fields:
         if field in data:

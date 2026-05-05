@@ -101,7 +101,7 @@ const OrganizerDashboardPage = () => {
           <div className="inline-flex items-center px-3 py-1 rounded-lg bg-primary-50 text-primary-700 text-[10px] font-black uppercase tracking-widest mb-3 border border-primary-100">
             Management Portal
           </div>
-          <h1 className="text-4xl font-black text-gray-900 tracking-tighter">Organizer Dashboard</h1>
+          <h1 className="text-4xl font-semibold font-black text-gray-900 tracking-tighter">Organizer Dashboard</h1>
           <p className="text-gray-500 font-medium mt-2">Manage your events and track participation.</p>
         </div>
         <Link to="/organizer/events/new">
