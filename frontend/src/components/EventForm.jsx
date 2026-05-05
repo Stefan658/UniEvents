@@ -52,11 +52,18 @@ const EventForm = ({
         return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
       };
 
+      // Check if this is a retake (template) or a normal edit
+      // If it has an ID and no status/dates are specifically wiped, it's likely an edit.
+      // But for a retake, we passed the whole object.
+      // The requirement says DO NOT pre-fill start_at, end_at, id, status, created_at.
+      
+      const isRetake = !initialData.id || (initialData.id && window.location.pathname.includes('/new'));
+
       setFormData({
         title: initialData.title || '',
         description: initialData.description || '',
-        start_at: formatDate(initialData.start_at),
-        end_at: formatDate(initialData.end_at),
+        start_at: isRetake ? '' : formatDate(initialData.start_at),
+        end_at: isRetake ? '' : formatDate(initialData.end_at),
         location: initialData.location || '',
         category_id: initialData.category_id || '',
         participation_type: initialData.participation_type || 'on-site',
@@ -89,7 +96,23 @@ const EventForm = ({
 
   const handleFormSubmit = (e) => {
     e.preventDefault();
-    onSubmit(formData);
+    
+    // Sanitize data before submission
+    const submissionData = { ...formData };
+    
+    // 1. Handle max_participants
+    if (!formData.requires_registration || formData.max_participants === '' || formData.max_participants === null) {
+      submissionData.max_participants = null;
+    } else {
+      submissionData.max_participants = Number(formData.max_participants);
+    }
+
+    // 2. Handle registration_deadline (if it ever gets added to state, or for future proofing)
+    if (submissionData.registration_deadline === '') {
+      submissionData.registration_deadline = null;
+    }
+
+    onSubmit(submissionData);
   };
 
   if (fetchingCategories) return <Loader />;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import PageContainer from '../components/PageContainer';
 import SectionCard from '../components/SectionCard';
 import Button from '../components/Button';
@@ -9,10 +9,11 @@ import { getAllEvents, deleteEvent } from '../api/events';
 import { getEventRegistrations } from '../api/registrations';
 import { getEventFeedbackSummary } from '../api/feedback';
 import { useAuth } from '../contexts/AuthContext';
-import { Plus, Edit2, Trash2, Calendar, MapPin, Users, ExternalLink, Star } from 'lucide-react';
+import { Plus, Edit2, Trash2, Calendar, MapPin, Users, ExternalLink, Star, RefreshCcw } from 'lucide-react';
 
 const OrganizerDashboardPage = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [events, setEvents] = useState([]);
   const [participantCounts, setParticipantCounts] = useState({});
   const [feedbackSummaries, setFeedbackSummaries] = useState({});
@@ -76,6 +77,10 @@ const OrganizerDashboardPage = () => {
         alert('Failed to delete event: ' + err);
       }
     }
+  };
+
+  const handleRetake = (event) => {
+    navigate('/organizer/events/new', { state: { templateEvent: event } });
   };
 
   const formatDate = (dateString) => {
@@ -170,21 +175,30 @@ const OrganizerDashboardPage = () => {
               )}
               <td className="px-8 py-5 text-right">
                 <div className="flex items-center justify-end space-x-2">
-                  <Link to={`/events/${event.id}`} className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all">
+                  <Link to={`/events/${event.id}`} className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all" title="View Details">
                     <ExternalLink className="w-5 h-5" />
                   </Link>
-                  {!isPast && (
+                  {!isPast ? (
                     <>
-                      <Link to={`/organizer/events/${event.id}/edit`} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
+                      <Link to={`/organizer/events/${event.id}/edit`} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all" title="Edit Event">
                         <Edit2 className="w-5 h-5" />
                       </Link>
                       <button 
                         onClick={() => handleDelete(event.id)}
                         className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                        title="Delete Event"
                       >
                         <Trash2 className="w-5 h-5" />
                       </button>
                     </>
+                  ) : (
+                    <button 
+                      onClick={() => handleRetake(event)}
+                      className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all"
+                      title="Schedule Again"
+                    >
+                      <RefreshCcw className="w-5 h-5" />
+                    </button>
                   )}
                 </div>
               </td>

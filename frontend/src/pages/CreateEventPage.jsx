@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { createEvent } from '../api/events';
 import PageContainer from '../components/PageContainer';
 import SectionCard from '../components/SectionCard';
 import EventForm from '../components/EventForm';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, RefreshCcw } from 'lucide-react';
 
 const CreateEventPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+
+  const templateEvent = location.state?.templateEvent;
 
   const handleSubmit = async (formData) => {
     setIsLoading(true);
@@ -39,10 +42,19 @@ const CreateEventPage = () => {
       </button>
 
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-semibold font-black text-gray-900 mb-8">Create New Event</h1>
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-semibold font-black text-gray-900">Create New Event</h1>
+          {templateEvent && (
+            <div className="flex items-center space-x-2 px-4 py-2 bg-primary-50 text-primary-700 rounded-xl border border-primary-100 text-sm font-bold animate-in fade-in slide-in-from-right-4 duration-500">
+              <RefreshCcw className="w-4 h-4" />
+              <span>Based on previous event</span>
+            </div>
+          )}
+        </div>
         
         <SectionCard>
           <EventForm 
+            initialData={templateEvent}
             onSubmit={handleSubmit} 
             onCancel={() => navigate('/organizer')} 
             isLoading={isLoading} 
