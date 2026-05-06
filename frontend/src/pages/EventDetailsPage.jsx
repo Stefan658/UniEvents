@@ -5,7 +5,7 @@ import Loader from '../components/Loader';
 import ErrorMessage from '../components/ErrorMessage';
 import Button from '../components/Button';
 import SectionCard from '../components/SectionCard';
-import { getEventById, updateEventStatus } from '../api/events';
+import { getEventById, updateEventStatus, getAllEvents } from '../api/events';
 import { registerForEvent, getEventRegistrations, cancelRegistration } from '../api/registrations';
 import { getEventMaterials } from '../api/materials';
 import { submitFeedback, getEventFeedback, getEventFeedbackSummary } from '../api/feedback';
@@ -26,7 +26,8 @@ import {
   XCircle,
   Star,
   Globe,
-  ExternalLink
+  ExternalLink,
+  AlertTriangle
 } from 'lucide-react';
 
 const EventDetailsPage = () => {
@@ -40,6 +41,7 @@ const EventDetailsPage = () => {
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [registrationMessage, setRegistrationMessage] = useState({ type: '', text: '' });
+  const [allEvents, setAllEvents] = useState([]);
   
   // Feedback states
   const [rating, setRating] = useState(5);
@@ -103,13 +105,19 @@ const EventDetailsPage = () => {
         setEvent(eventData);
         setMaterials(materialsData);
         
-        await Promise.all([
+        const promises = [
           fetchRegistrations(),
           fetchUserFeedback(),
           fetchFeedbackData()
-        ]);
+        ];
+
+        if (role === 'admin') {
+          promises.push(getAllEvents().then(setAllEvents));
+        }
+
+        await Promise.all(promises);
       } catch (err) {
-        setError(err);
+        setError(err?.response?.data?.error || err?.message || String(err));
       } finally {
         setLoading(false);
       }
@@ -117,6 +125,32 @@ const EventDetailsPage = () => {
 
     fetchEventData();
   }, [id, isAuthenticated, role, user]);
+
+  const checkConflicts = () => {
+    if (!event || !event.start_at || !event.end_at || !event.location || allEvents.length === 0) return { warning: [], blocking: [] };
+    
+    const startA = new Date(event.start_at).getTime();
+    const endA = new Date(event.end_at).getTime();
+    const locA = event.location.trim().toLowerCase();
+    
+    const overlaps = allEvents.filter(other => {
+      if (other.id === event.id) return false;
+      if (!other.start_at || !other.end_at || !other.location) return false;
+      if (['rejected', 'cancelled'].includes(other.status)) return false;
+      
+      const locB = other.location.trim().toLowerCase();
+      if (locA !== locB) return false;
+      
+      const startB = new Date(other.start_at).getTime();
+      const endB = new Date(other.end_at).getTime();
+      return startA < endB && endA > startB;
+    });
+
+    return {
+      warning: overlaps.filter(o => o.status === 'pending'),
+      blocking: overlaps.filter(o => ['published', 'active'].includes(o.status))
+    };
+  };
 
   const handleRegister = async () => {
     if (!isAuthenticated) {
@@ -286,6 +320,11 @@ const EventDetailsPage = () => {
   if (error) return <PageContainer><ErrorMessage message={error} /></PageContainer>;
   if (!event) return <PageContainer><ErrorMessage message="Event not found." /></PageContainer>;
 
+  const canSeeMeetingLink = 
+    role === 'admin' || 
+    role === 'organizer' || 
+    (isAuthenticated && userRegistration);
+
   const isPastEvent = new Date(event.end_at) < new Date();
 
   const confirmedCount = Array.isArray(registrations) 
@@ -400,7 +439,7 @@ const EventDetailsPage = () => {
                   This event has an online component on <span className="font-bold text-white capitalize">{event.online_platform}</span>.
                 </p>
 
-                {(role === 'admin' || role === 'organizer' || !event.requires_registration || userRegistration) ? (
+                {canSeeMeetingLink ? (
                   <a 
                     href={event.online_meeting_url} 
                     target="_blank" 
@@ -413,7 +452,9 @@ const EventDetailsPage = () => {
                 ) : (
                   <div className="bg-blue-700/50 backdrop-blur-sm border border-blue-400/30 rounded-2xl p-4">
                     <p className="text-xs font-bold text-blue-100 text-center">
-                      Register to unlock the meeting link
+                      {!isAuthenticated 
+                        ? "Login/Register to unlock the meeting link" 
+                        : "Register to unlock the meeting link"}
                     </p>
                   </div>
                 )}
@@ -603,22 +644,47 @@ const EventDetailsPage = () => {
 
                           {role === 'admin' && event.status === 'pending' && (
                             <div className="pt-4 border-t border-gray-100 space-y-3">
-                              <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 text-center mb-2">Moderation Actions</p>
-                              <Button 
-                                className="w-full !py-3 bg-green-600 hover:bg-green-700 shadow-green-100"
-                                onClick={() => handleAdminStatusUpdate('published')}
-                                isLoading={actionLoading}
-                              >
-                                <CheckCircle className="w-4 h-4 mr-2" /> Approve & Publish
-                              </Button>
-                              <Button 
-                                variant="secondary"
-                                className="w-full !py-3 text-red-600 border-red-100 hover:bg-red-50"
-                                onClick={() => handleAdminStatusUpdate('rejected')}
-                                isLoading={actionLoading}
-                              >
-                                <XCircle className="w-4 h-4 mr-2" /> Reject Event
-                              </Button>
+                              {(() => {
+                                const { warning, blocking } = checkConflicts();
+                                return (
+                                  <>
+                                    {blocking.length > 0 && (
+                                      <div className="mb-4 p-4 rounded-2xl bg-red-50 border border-red-100 flex items-start space-x-3">
+                                        <XCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                                        <p className="text-xs font-bold text-red-700 leading-relaxed">
+                                          Cannot approve: overlaps with published event '{blocking[0].title}'.
+                                        </p>
+                                      </div>
+                                    )}
+                                    {blocking.length === 0 && warning.length > 0 && (
+                                      <div className="mb-4 p-4 rounded-2xl bg-amber-50 border border-amber-100 flex items-start space-x-3">
+                                        <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                                        <p className="text-xs font-bold text-amber-700 leading-relaxed">
+                                          Warning: overlaps with {warning.length} other pending event(s).
+                                        </p>
+                                      </div>
+                                    )}
+                                    
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 text-center mb-2">Moderation Actions</p>
+                                    <Button 
+                                      className="w-full !py-3 bg-green-600 hover:bg-green-700 shadow-green-100"
+                                      onClick={() => handleAdminStatusUpdate('published')}
+                                      isLoading={actionLoading}
+                                      disabled={blocking.length > 0}
+                                    >
+                                      <CheckCircle className="w-4 h-4 mr-2" /> Approve & Publish
+                                    </Button>
+                                    <Button 
+                                      variant="secondary"
+                                      className="w-full !py-3 text-red-600 border-red-100 hover:bg-red-50"
+                                      onClick={() => handleAdminStatusUpdate('rejected')}
+                                      isLoading={actionLoading}
+                                    >
+                                      <XCircle className="w-4 h-4 mr-2" /> Reject Event
+                                    </Button>
+                                  </>
+                                );
+                              })()}
                             </div>
                           )}
                         </div>

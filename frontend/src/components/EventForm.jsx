@@ -84,6 +84,15 @@ const EventForm = ({
         [name]: type === 'checkbox' ? checked : value
       };
       
+      // Improved Online Location UX
+      if (name === 'participation_type') {
+        if (value === 'online' && !prev.location.trim()) {
+          newState.location = "No Physical Location (Online Event)";
+        } else if ((value === 'on-site' || value === 'hybrid') && prev.location === "No Physical Location (Online Event)") {
+          newState.location = '';
+        }
+      }
+
       // Clear online fields if switching to on-site
       if (name === 'participation_type' && value === 'on-site') {
         newState.online_platform = '';
@@ -110,6 +119,11 @@ const EventForm = ({
     // 2. Handle registration_deadline (if it ever gets added to state, or for future proofing)
     if (submissionData.registration_deadline === '') {
       submissionData.registration_deadline = null;
+    }
+
+    // 3. Frontend-only fix: Default location for online events to satisfy backend NOT NULL
+    if (formData.participation_type === 'online' && !formData.location.trim()) {
+      submissionData.location = "No Physical Location (Online Event)";
     }
 
     onSubmit(submissionData);
@@ -169,8 +183,8 @@ const EventForm = ({
           name="location"
           value={formData.location}
           onChange={handleChange}
-          placeholder="e.g., Main Auditorium"
-          required
+          placeholder={formData.participation_type === 'online' ? 'Optional for online events' : 'e.g., Main Auditorium'}
+          required={formData.participation_type !== 'online'}
         />
 
         <div>

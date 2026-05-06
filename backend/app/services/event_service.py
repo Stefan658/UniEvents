@@ -1,4 +1,5 @@
 from datetime import datetime
+from sqlalchemy import func
 from backend.app.extensions import db
 from backend.app.models.event import Event
 from backend.app.models.user import User
@@ -188,7 +189,25 @@ def update_event_status(event_id, new_status):
     if not isinstance(new_status, str) or new_status.lower() not in ALLOWED_EVENT_STATUSES:
         raise ValueError(f"Invalid status '{new_status}'. Allowed statuses are: {', '.join(ALLOWED_EVENT_STATUSES)}")
 
-    event.status = new_status.lower()
+    new_status = new_status.lower()
+
+    # Hardening: Check for overlapping published events
+    if new_status in ["published", "active"]:
+        loc_normalized = event.location.strip().lower()
+        
+        # Overlap logic: (startA < endB) AND (endA > startB)
+        overlapping_event = Event.query.filter(
+            Event.id != event.id,
+            Event.status.in_(["published", "active"]),
+            func.lower(func.trim(Event.location)) == loc_normalized,
+            Event.start_at < event.end_at,
+            Event.end_at > event.start_at
+        ).first()
+
+        if overlapping_event:
+            raise ValueError(f"Cannot publish event: location is already occupied by '{overlapping_event.title}' during this interval.")
+
+    event.status = new_status
     event.updated_at = datetime.utcnow()
     db.session.commit()
     return event

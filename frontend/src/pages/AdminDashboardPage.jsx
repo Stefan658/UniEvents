@@ -79,13 +79,13 @@ const AdminDashboardPage = () => {
   };
 
   const checkConflicts = (event) => {
-    if (!event.start_at || !event.end_at || !event.location) return [];
+    if (!event.start_at || !event.end_at || !event.location) return { warning: [], blocking: [] };
     
     const startA = new Date(event.start_at).getTime();
     const endA = new Date(event.end_at).getTime();
     const locA = event.location.trim().toLowerCase();
     
-    return events.filter(other => {
+    const overlaps = events.filter(other => {
       if (other.id === event.id) return false;
       if (!other.start_at || !other.end_at || !other.location) return false;
       
@@ -101,6 +101,11 @@ const AdminDashboardPage = () => {
       // Overlap: startA < endB AND endA > startB
       return startA < endB && endA > startB;
     });
+
+    return {
+      warning: overlaps.filter(o => o.status === 'pending'),
+      blocking: overlaps.filter(o => ['published', 'active'].includes(o.status))
+    };
   };
 
   const totalEvents = events.length;
@@ -235,17 +240,32 @@ const AdminDashboardPage = () => {
                           </div>
                         </td>
                         <td className="px-8 py-6">
-                          {conflicts.length > 0 ? (
-                            <div className="flex items-start bg-amber-50 text-amber-700 p-3 rounded-xl border border-amber-100 max-w-xs">
-                              <AlertTriangle className="w-4 h-4 mr-2 shrink-0 mt-0.5" />
-                              <div>
-                                <p className="text-[10px] font-black uppercase tracking-widest leading-none mb-1">Scheduling Conflict</p>
-                                <p className="text-[10px] font-medium leading-tight">Overlaps with {conflicts.length} other event(s) at this location.</p>
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-300">No issues detected</span>
-                          )}
+                          {(() => {
+                            const { warning, blocking } = checkConflicts(event);
+                            if (blocking.length > 0) {
+                              return (
+                                <div className="flex items-start bg-red-50 text-red-700 p-3 rounded-xl border border-red-100 max-w-xs">
+                                  <XCircle className="w-4 h-4 mr-2 shrink-0 mt-0.5" />
+                                  <div>
+                                    <p className="text-[10px] font-black uppercase tracking-widest leading-none mb-1">Blocking Conflict</p>
+                                    <p className="text-[10px] font-medium leading-tight">Cannot approve: overlaps with published event '{blocking[0].title}'.</p>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            if (warning.length > 0) {
+                              return (
+                                <div className="flex items-start bg-amber-50 text-amber-700 p-3 rounded-xl border border-amber-100 max-w-xs">
+                                  <AlertTriangle className="w-4 h-4 mr-2 shrink-0 mt-0.5" />
+                                  <div>
+                                    <p className="text-[10px] font-black uppercase tracking-widest leading-none mb-1">Scheduling Warning</p>
+                                    <p className="text-[10px] font-medium leading-tight">Overlaps with {warning.length} other pending event(s).</p>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return <span className="text-[10px] font-black uppercase tracking-widest text-gray-300">No issues detected</span>;
+                          })()}
                         </td>
                         <td className="px-8 py-6 text-right">
                           <div className="flex items-center justify-end space-x-2">
@@ -262,9 +282,13 @@ const AdminDashboardPage = () => {
                               <>
                                 <button 
                                   onClick={() => handleStatusUpdate(event.id, 'published')}
-                                  disabled={actionLoading}
-                                  className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-xl transition-all"
-                                  title="Approve & Publish"
+                                  disabled={actionLoading || checkConflicts(event).blocking.length > 0}
+                                  className={`p-2 rounded-xl transition-all ${
+                                    checkConflicts(event).blocking.length > 0 
+                                      ? 'text-gray-200 cursor-not-allowed' 
+                                      : 'text-gray-400 hover:text-green-600 hover:bg-green-50'
+                                  }`}
+                                  title={checkConflicts(event).blocking.length > 0 ? "Cannot approve: scheduling conflict" : "Approve & Publish"}
                                 >
                                   <CheckCircle className="w-5 h-5" />
                                 </button>
@@ -293,9 +317,13 @@ const AdminDashboardPage = () => {
                             {activeTab === 'rejected' && (
                               <button 
                                 onClick={() => handleStatusUpdate(event.id, 'published')}
-                                disabled={actionLoading}
-                                className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-xl transition-all"
-                                title="Approve / Restore"
+                                disabled={actionLoading || checkConflicts(event).blocking.length > 0}
+                                className={`p-2 rounded-xl transition-all ${
+                                  checkConflicts(event).blocking.length > 0 
+                                    ? 'text-gray-200 cursor-not-allowed' 
+                                    : 'text-gray-400 hover:text-green-600 hover:bg-green-50'
+                                }`}
+                                title={checkConflicts(event).blocking.length > 0 ? "Cannot restore: scheduling conflict" : "Approve / Restore"}
                               >
                                 <CheckCircle className="w-5 h-5" />
                               </button>
