@@ -224,7 +224,13 @@ const AdminDashboardPage = () => {
                       <tr key={event.id} className="hover:bg-gray-50/30 transition-colors">
                         <td className="px-8 py-6">
                           <div>
-                            <p className="font-bold text-gray-900 mb-1">{event.title}</p>
+                            <Link 
+                              to={`/events/${event.id}`} 
+                              target="_blank"
+                              className="font-bold text-gray-900 mb-1 hover:text-primary-600 hover:underline transition-colors block w-fit"
+                            >
+                              {event.title}
+                            </Link>
                             <p className="text-xs font-bold text-primary-600">by {event.organizer_full_name}</p>
                           </div>
                         </td>
@@ -270,15 +276,6 @@ const AdminDashboardPage = () => {
                         </td>
                         <td className="px-8 py-6 text-right">
                           <div className="flex items-center justify-end space-x-2">
-                            <Link 
-                              to={`/events/${event.id}`} 
-                              target="_blank"
-                              className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all"
-                              title="Preview Event"
-                            >
-                              <ExternalLink className="w-5 h-5" />
-                            </Link>
-                            
                             {activeTab === 'pending' && (
                               <>
                                 <button 

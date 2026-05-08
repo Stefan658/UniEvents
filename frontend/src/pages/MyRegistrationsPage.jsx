@@ -176,19 +176,32 @@ const RegistrationCard = ({ reg, onCancel, actionLoading, isCancelled, isPast })
     });
   };
 
+  const formatPrice = (price) => {
+    return Number(price).toFixed(2).replace(/\.00$/, "");
+  };
+
   return (
     <SectionCard className={`group transition-all flex flex-col ${isCancelled ? 'border-red-100 bg-red-50/10' : 'hover:border-primary-100'}`}>
       <div className="flex-grow">
         <div className="flex justify-between items-start mb-4">
-          <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
-            isCancelled 
-              ? 'bg-red-50 text-red-700 border-red-100' 
-              : isPast 
-                ? 'bg-gray-100 text-gray-600 border-gray-200' 
-                : 'bg-green-50 text-green-700 border-green-100'
-          }`}>
-            {isCancelled ? 'CANCELLED' : reg.status}
-          </span>
+          <div className="flex flex-wrap gap-2">
+            <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
+              isCancelled 
+                ? 'bg-red-50 text-red-700 border-red-100' 
+                : isPast 
+                  ? 'bg-gray-100 text-gray-600 border-gray-200' 
+                  : 'bg-green-50 text-green-700 border-green-100'
+            }`}>
+              {isCancelled ? 'EVENT CANCELLED' : reg.status === 'confirmed' ? 'Confirmed' : reg.status}
+            </span>
+            <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
+              reg.is_free_entry 
+                ? 'bg-blue-50 text-blue-700 border-blue-100' 
+                : 'bg-amber-50 text-amber-700 border-amber-100'
+            }`}>
+              {reg.is_free_entry ? 'Free' : reg.ticket_price ? `${formatPrice(reg.ticket_price)} RON` : 'Paid'}
+            </span>
+          </div>
           <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">
             Registered on {new Date(reg.registered_at).toLocaleDateString()}
           </p>
@@ -217,12 +230,23 @@ const RegistrationCard = ({ reg, onCancel, actionLoading, isCancelled, isPast })
       </div>
       
       <div className="flex space-x-3 pt-6 border-t border-gray-50">
-        <Link to={`/events/${reg.event_id}`} className="flex-grow">
-          <Button variant={isCancelled ? "ghost" : "secondary"} className="w-full !py-2.5 text-xs">
-            <ExternalLink className="w-3.5 h-3.5 mr-2" />
-            View Details
-          </Button>
-        </Link>
+        {!isPast && (
+          <Link to={`/events/${reg.event_id}`} className="flex-grow">
+            <Button variant={isCancelled ? "ghost" : "secondary"} className="w-full !py-2.5 text-xs">
+              <ExternalLink className="w-3.5 h-3.5 mr-2" />
+              View Details
+            </Button>
+          </Link>
+        )}
+        
+        {isPast && !isCancelled && (
+          <Link to={`/events/${reg.event_id}#feedback`} className="flex-grow">
+            <Button variant="primary" className="w-full !py-2.5 text-xs">
+              Leave Feedback
+            </Button>
+          </Link>
+        )}
+
         {!isCancelled && !isPast && (
           <button 
             onClick={() => onCancel(reg.id)}

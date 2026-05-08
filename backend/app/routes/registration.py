@@ -28,6 +28,8 @@ def _serialize_registration(registration):
         "event_location": registration.event.location if registration.event else None,
         "event_participation_type": registration.event.participation_type if registration.event else None,
         "event_status": registration.event.status if registration.event else None,
+        "is_free_entry": registration.event.is_free_entry if registration.event else True,
+        "ticket_price": float(registration.event.ticket_price) if registration.event and registration.event.ticket_price is not None else None,
     }
 
 

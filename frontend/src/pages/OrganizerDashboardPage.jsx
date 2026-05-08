@@ -135,7 +135,12 @@ const OrganizerDashboardPage = () => {
               <td className="px-8 py-5">
                 <div className="flex items-center">
                   <div>
-                    <p className="font-bold text-gray-900 group-hover:text-primary-600 transition-colors">{event.title}</p>
+                    <Link 
+                      to={`/events/${event.id}`}
+                      className="font-bold text-gray-900 hover:text-primary-600 hover:underline transition-colors block w-fit"
+                    >
+                      {event.title}
+                    </Link>
                     <div className="flex items-center text-[10px] font-black uppercase tracking-widest text-gray-400 mt-1">
                       {event.category_name} • {formatDate(event.start_at)}
                     </div>
@@ -175,9 +180,6 @@ const OrganizerDashboardPage = () => {
               )}
               <td className="px-8 py-5 text-right">
                 <div className="flex items-center justify-end space-x-2">
-                  <Link to={`/events/${event.id}`} className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all" title="View Details">
-                    <ExternalLink className="w-5 h-5" />
-                  </Link>
                   {!isPast ? (
                     <>
                       <Link to={`/organizer/events/${event.id}/edit`} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all" title="Edit Event">

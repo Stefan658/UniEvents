@@ -747,16 +747,7 @@ const EventDetailsPage = () => {
                                 </Button>
                               )}
                             </>
-                          ) : (
-                            <div className="p-4 rounded-2xl bg-blue-50 border border-blue-100 text-center">
-                              <p className="text-sm font-bold text-blue-700 leading-relaxed">
-                                {role === 'admin' ? 'Admin View' : 'Organizer View'}
-                              </p>
-                              <p className="text-xs font-medium text-blue-600 mt-1">
-                                Registration is only available for university participants.
-                              </p>
-                            </div>
-                          )}
+                          ) : null}
                         </div>
                       ) : (
                         <div className="space-y-6">
