@@ -44,6 +44,7 @@ def _serialize_event(event):
         else None,
         "requires_registration": event.requires_registration,
         "is_free_entry": event.is_free_entry,
+        "ticket_price": float(event.ticket_price) if event.ticket_price is not None else None,
         "online_platform": event.online_platform,
         "online_meeting_url": event.online_meeting_url,
         "created_at": event.created_at.isoformat(),
@@ -190,8 +191,8 @@ def create_event():
     try:
         new_event = event_service.create_event(data)
         return jsonify(_serialize_event(new_event)), 201
-    except ValueError:
-        return jsonify({"error": "Invalid input data."}), 400
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
     except Exception:
         return jsonify({"error": "An internal server error occurred."}), 500
 
@@ -209,8 +210,8 @@ def update_event_route(event_id):
             return jsonify({"error": "Event not found."}), 404
 
         return jsonify(_serialize_event(updated_event)), 200
-    except ValueError:
-        return jsonify({"error": "Invalid input data."}), 400
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
     except Exception:
         return jsonify({"error": "An internal server error occurred."}), 500
 

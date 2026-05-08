@@ -20,6 +20,15 @@ const EventCard = ({ event }) => {
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
 
+  const hasTicketPrice =
+    event?.ticket_price !== null &&
+    event?.ticket_price !== undefined &&
+    Number(event.ticket_price) > 0;
+
+  const formattedTicketPrice = hasTicketPrice
+    ? Number(event.ticket_price).toFixed(2).replace(/\.00$/, "")
+    : null;
+
   return (
     <Link to={`/events/${id}`} className="block group h-full">
       <div className="bg-white rounded-3xl shadow-soft border border-gray-100/50 overflow-hidden hover:shadow-soft-lg hover:-translate-y-1 transition-all duration-300 h-full flex flex-col">
@@ -29,9 +38,13 @@ const EventCard = ({ event }) => {
               <Tag className="w-3 h-3 mr-1.5" />
               {category_name || 'Event'}
             </span>
-            {is_free_entry && (
+            {is_free_entry ? (
               <span className="inline-flex items-center px-3 py-1 rounded-xl text-xs font-semibold uppercase tracking-wider bg-green-50 text-green-700 border border-green-100/50">
                 Free
+              </span>
+            ) : (
+              <span className="inline-flex items-center px-3 py-1 rounded-xl text-xs font-semibold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-100/50">
+                Paid {formattedTicketPrice ? `· ${formattedTicketPrice} RON` : 'Event'}
               </span>
             )}
           </div>

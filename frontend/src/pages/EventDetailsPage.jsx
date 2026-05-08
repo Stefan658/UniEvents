@@ -346,6 +346,19 @@ const EventDetailsPage = () => {
     ? Math.max(0, event.max_participants - confirmedCount) 
     : 'Unlimited';
 
+  const isPaidEvent = event?.is_free_entry === false;
+
+  const hasTicketPrice =
+    event?.ticket_price !== null &&
+    event?.ticket_price !== undefined &&
+    Number(event.ticket_price) > 0;
+
+  const formattedTicketPrice = hasTicketPrice
+    ? Number(event.ticket_price).toFixed(2).replace(/\.00$/, "")
+    : null;
+
+  const ctaButtonText = event?.is_free_entry ? 'Register Now' : 'Reserve Spot';
+
   return (
     <PageContainer>
       <Link to="/" className="inline-flex items-center text-gray-500 hover:text-primary-600 font-bold text-sm mb-8 group transition-colors">
@@ -583,7 +596,17 @@ const EventDetailsPage = () => {
           <SectionCard className="!p-0 overflow-hidden">
             <div className="p-8 pb-4">
               <h3 className="text-2xl font-black text-gray-900 tracking-tight mb-2">Registration</h3>
-              <p className="text-gray-500 font-medium text-sm">Join this event to get full access and updates.</p>
+              <p className="text-gray-500 font-medium text-sm mb-4">Join this event to get full access and updates.</p>
+              {!event.is_free_entry && (
+                <div className="flex flex-col space-y-1 p-4 rounded-xl bg-gray-50 border border-gray-100">
+                  <p className="text-3xl font-black text-primary-600 tracking-tighter">
+                    {formattedTicketPrice ? `${formattedTicketPrice} RON` : 'Not specified'}
+                  </p>
+                  <p className="text-xs text-amber-600 font-medium mt-1">
+                    Payment processing is not available yet. Registration reserves your spot.
+                  </p>
+                </div>
+              )}
             </div>
             
             <div className="px-8 pb-8 pt-4">
@@ -720,7 +743,7 @@ const EventDetailsPage = () => {
                                   isLoading={actionLoading}
                                   disabled={availableSlots === 0}
                                 >
-                                  {availableSlots === 0 ? 'Sold Out' : 'Register Now'}
+                                  {availableSlots === 0 ? 'Sold Out' : ctaButtonText}
                                 </Button>
                               )}
                             </>

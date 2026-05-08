@@ -58,6 +58,24 @@ def create_event(data):
         except (TypeError, ValueError):
             raise ValueError("'max_participants' must be a positive integer.")
 
+    # Validate ticket_price based on is_free_entry
+    is_free_entry = data.get('is_free_entry', True)
+    ticket_price = None
+
+    if is_free_entry:
+        ticket_price = None
+    else:
+        if 'ticket_price' not in data or data['ticket_price'] is None:
+            raise ValueError("Ticket price is required for paid events.")
+        try:
+            ticket_price = float(data['ticket_price'])
+            if ticket_price <= 0:
+                raise ValueError("Ticket price must be greater than 0.")
+        except (TypeError, ValueError) as e:
+            if str(e) == "Ticket price must be greater than 0.":
+                raise e
+            raise ValueError("Ticket price must be a valid number.")
+
     # --- Creation ---
     new_event = Event(
         title=data['title'],
@@ -74,7 +92,8 @@ def create_event(data):
         max_participants=max_participants,
         registration_deadline=registration_deadline,
         requires_registration=data.get('requires_registration', False),
-        is_free_entry=data.get('is_free_entry', True),
+        is_free_entry=is_free_entry,
+        ticket_price=ticket_price,
         online_platform=data.get('online_platform'),
         online_meeting_url=data.get('online_meeting_url')
     )
@@ -125,6 +144,25 @@ def update_event(event_id, data):
     for field in updatable_fields:
         if field in data:
             setattr(event, field, data[field])
+            
+    # Validate and update ticket_price
+    if 'is_free_entry' in data or 'ticket_price' in data:
+        is_free = data.get('is_free_entry', event.is_free_entry)
+        if is_free:
+            event.ticket_price = None
+        else:
+            tp_value = data.get('ticket_price', event.ticket_price)
+            if tp_value is None:
+                raise ValueError("Ticket price is required for paid events.")
+            try:
+                tp_float = float(tp_value)
+                if tp_float <= 0:
+                    raise ValueError("Ticket price must be greater than 0.")
+                event.ticket_price = tp_float
+            except (TypeError, ValueError) as e:
+                if str(e) == "Ticket price must be greater than 0.":
+                    raise e
+                raise ValueError("Ticket price must be a valid number.")
 
     # Handle dates separately for parsing
     date_fields = ['start_at', 'end_at', 'registration_deadline']

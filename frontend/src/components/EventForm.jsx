@@ -71,7 +71,8 @@ const EventForm = ({
         online_meeting_url: initialData.online_meeting_url || '',
         max_participants: initialData.max_participants || '',
         requires_registration: !!initialData.requires_registration,
-        is_free_entry: !!initialData.is_free_entry
+        is_free_entry: !!initialData.is_free_entry,
+        ticket_price: initialData.ticket_price || ''
       });
     }
   }, [initialData]);
@@ -124,6 +125,13 @@ const EventForm = ({
     // 3. Frontend-only fix: Default location for online events to satisfy backend NOT NULL
     if (formData.participation_type === 'online' && !formData.location.trim()) {
       submissionData.location = "No Physical Location (Online Event)";
+    }
+
+    // Handle ticket_price
+    if (formData.is_free_entry) {
+      submissionData.ticket_price = null;
+    } else {
+      submissionData.ticket_price = formData.ticket_price === '' ? null : Number(formData.ticket_price);
     }
 
     onSubmit(submissionData);
@@ -309,6 +317,25 @@ const EventForm = ({
             <span className="text-sm font-bold text-gray-700 group-hover:text-gray-900 transition-colors">Free Entry</span>
           </label>
         </div>
+
+        {!formData.is_free_entry && (
+          <div className="md:col-span-2 mt-4 p-6 rounded-2xl bg-amber-50 border border-amber-100">
+            <InputField
+              label="Ticket Price (RON)"
+              name="ticket_price"
+              type="number"
+              min="0.01"
+              step="0.01"
+              value={formData.ticket_price}
+              onChange={handleChange}
+              placeholder="e.g. 50.00"
+              required={!formData.is_free_entry}
+            />
+            <p className="mt-2 text-xs font-bold text-amber-700">
+              Required for paid events. Payment processing is not active yet.
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="pt-6 flex justify-end space-x-4">
