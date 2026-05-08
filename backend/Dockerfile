@@ -5,8 +5,13 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+# Copy backend as a package to satisfy 'from backend.app' imports
+COPY . backend/
+
+ENV PYTHONPATH=/app
+ENV FLASK_APP=backend.app:create_app
+ENV PORT=5000
 
 EXPOSE 5000
 
-CMD ["python", "app.py"]
+CMD ["python", "backend/app.py"]

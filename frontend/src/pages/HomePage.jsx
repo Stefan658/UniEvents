@@ -23,8 +23,10 @@ const HomePage = () => {
         const data = await getAllEvents();
         const now = new Date();
         
-        const upcoming = data.filter(event => new Date(event.start_at) >= now)
-          .sort((a, b) => new Date(a.start_at) - new Date(b.start_at));
+        const upcoming = data.filter(event => 
+          new Date(event.start_at) >= now && 
+          (event.status === 'published' || event.status === 'active')
+        ).sort((a, b) => new Date(a.start_at) - new Date(b.start_at));
         
         setUpcomingEvents(upcoming);
 

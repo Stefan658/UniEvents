@@ -257,16 +257,23 @@ const EventDetailsPage = () => {
   };
 
   const handleAdminStatusUpdate = async (status) => {
-    if (!window.confirm(`Are you sure you want to ${status === 'published' ? 'approve' : 'reject'} this event?`)) return;
+    let confirmMsg = `Are you sure you want to ${status === 'published' ? 'approve' : 'reject'} this event?`;
+    if (status === 'cancelled') confirmMsg = 'Are you sure you want to cancel this published event? This will notify participants.';
+
+    if (!window.confirm(confirmMsg)) return;
 
     setActionLoading(true);
     setRegistrationMessage({ type: '', text: '' });
     try {
       const updatedEvent = await updateEventStatus(id, status);
       setEvent(updatedEvent);
+      
+      let successMsg = `Event ${status === 'published' ? 'approved and published' : 'rejected'} successfully.`;
+      if (status === 'cancelled') successMsg = 'Event cancelled successfully.';
+
       setRegistrationMessage({ 
         type: 'success', 
-        text: `Event ${status === 'published' ? 'approved and published' : 'rejected'} successfully.` 
+        text: successMsg
       });
 
       // Auto-hide message after 5 seconds
@@ -320,10 +327,14 @@ const EventDetailsPage = () => {
   if (error) return <PageContainer><ErrorMessage message={error} /></PageContainer>;
   if (!event) return <PageContainer><ErrorMessage message="Event not found." /></PageContainer>;
 
+  const isCancelled = event.status === 'cancelled';
+
   const canSeeMeetingLink = 
-    role === 'admin' || 
-    role === 'organizer' || 
-    (isAuthenticated && userRegistration);
+    !isCancelled && (
+      role === 'admin' || 
+      role === 'organizer' || 
+      (isAuthenticated && userRegistration)
+    );
 
   const isPastEvent = new Date(event.end_at) < new Date();
 
@@ -576,207 +587,244 @@ const EventDetailsPage = () => {
             </div>
             
             <div className="px-8 pb-8 pt-4">
-              {event.requires_registration ? (
-                <>
-                  <div className="flex items-center justify-between p-4 rounded-2xl bg-gray-50 mb-6">
-                    <div className="flex items-center">
-                      <Users className="w-5 h-5 text-gray-400 mr-3" />
-                      <span className="font-bold text-gray-700">Available Slots</span>
-                    </div>
-                    <span className="text-primary-600 font-black">
-                      {availableSlots}
-                    </span>
+              {isCancelled ? (
+                <div className="space-y-6">
+                  <div className="p-6 rounded-[2rem] bg-red-50 border border-red-100 text-center">
+                    <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4 opacity-40" />
+                    <p className="font-black text-red-900 mb-2 text-lg leading-tight">Event Cancelled</p>
+                    <p className="text-sm font-medium text-red-700 leading-relaxed">
+                      This event was cancelled due to unforeseen reasons. We apologize for the inconvenience.
+                    </p>
                   </div>
-
-                  {!isPastEvent ? (
-                    <div className="space-y-4">
-                      {/* Role-based Registration Actions */}
-                      {!isAuthenticated ? (
-                        <div className="space-y-4">
-                          <p className="text-sm font-bold text-gray-600 bg-gray-50 p-4 rounded-2xl border border-dashed border-gray-200 text-center leading-relaxed">
-                            Sign in to reserve your spot for this event. Available for students and professors.
-                          </p>
-                          <Link to="/login" state={{ from: { pathname: `/events/${id}` } }}>
-                            <Button className="w-full !py-4 shadow-primary-200 shadow-xl mt-2">
-                              Sign In to Register
-                            </Button>
-                          </Link>
-                        </div>
-                      ) : role === 'student' ? (
-                        <>
-                          {userRegistration ? (
-                            <div className="space-y-4">
-                              <div className="p-4 rounded-2xl bg-green-50 border border-green-100 flex items-center space-x-3">
-                                <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
-                                <p className="text-sm font-bold text-green-700">You are registered!</p>
-                              </div>
-                              <Button 
-                                variant="secondary"
-                                className="w-full !py-4 border-red-100 text-red-600 hover:bg-red-50 hover:border-red-200 transition-all"
-                                onClick={handleCancel}
-                                isLoading={actionLoading}
-                              >
-                                <XCircle className="w-4 h-4 mr-2" />
-                                Cancel Registration
-                              </Button>
-                            </div>
-                          ) : (
-                            <Button 
-                              className="w-full !py-4 !text-base shadow-primary-200 shadow-xl"
-                              onClick={handleRegister}
-                              isLoading={actionLoading}
-                              disabled={availableSlots === 0}
-                            >
-                              {availableSlots === 0 ? 'Sold Out' : 'Register Now'}
-                            </Button>
-                          )}
-                        </>
-                      ) : (
-                        <div className="space-y-4">
-                          <div className="p-4 rounded-2xl bg-blue-50 border border-blue-100 text-center">
-                            <p className="text-sm font-bold text-blue-700 leading-relaxed">
-                              {role === 'admin' ? 'Admin View' : 'Organizer View'}
-                            </p>
-                            <p className="text-xs font-medium text-blue-600 mt-1">
-                              Registration is only available for university participants.
-                            </p>
-                          </div>
-
-                          {role === 'admin' && event.status === 'pending' && (
-                            <div className="pt-4 border-t border-gray-100 space-y-3">
-                              {(() => {
-                                const { warning, blocking } = checkConflicts();
-                                return (
-                                  <>
-                                    {blocking.length > 0 && (
-                                      <div className="mb-4 p-4 rounded-2xl bg-red-50 border border-red-100 flex items-start space-x-3">
-                                        <XCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-                                        <p className="text-xs font-bold text-red-700 leading-relaxed">
-                                          Cannot approve: overlaps with published event '{blocking[0].title}'.
-                                        </p>
-                                      </div>
-                                    )}
-                                    {blocking.length === 0 && warning.length > 0 && (
-                                      <div className="mb-4 p-4 rounded-2xl bg-amber-50 border border-amber-100 flex items-start space-x-3">
-                                        <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                                        <p className="text-xs font-bold text-amber-700 leading-relaxed">
-                                          Warning: overlaps with {warning.length} other pending event(s).
-                                        </p>
-                                      </div>
-                                    )}
-                                    
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 text-center mb-2">Moderation Actions</p>
-                                    <Button 
-                                      className="w-full !py-3 bg-green-600 hover:bg-green-700 shadow-green-100"
-                                      onClick={() => handleAdminStatusUpdate('published')}
-                                      isLoading={actionLoading}
-                                      disabled={blocking.length > 0}
-                                    >
-                                      <CheckCircle className="w-4 h-4 mr-2" /> Approve & Publish
-                                    </Button>
-                                    <Button 
-                                      variant="secondary"
-                                      className="w-full !py-3 text-red-600 border-red-100 hover:bg-red-50"
-                                      onClick={() => handleAdminStatusUpdate('rejected')}
-                                      isLoading={actionLoading}
-                                    >
-                                      <XCircle className="w-4 h-4 mr-2" /> Reject Event
-                                    </Button>
-                                  </>
-                                );
-                              })()}
-                            </div>
-                          )}
+                  <Button variant="ghost" className="w-full" onClick={handleShareEvent}>
+                    <Share2 className="w-4 h-4 mr-2" />
+                    Share Event
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  {/* Admin Moderation Actions (Independent) */}
+                  {role === 'admin' && (
+                    <div className="mb-6 space-y-4">
+                      {(event.status === 'published' || event.status === 'active') && (
+                        <div className="space-y-3">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 text-center mb-2">Moderation Actions</p>
+                          <Button 
+                            variant="secondary"
+                            className="w-full !py-3 text-red-600 border-red-100 hover:bg-red-50"
+                            onClick={() => handleAdminStatusUpdate('cancelled')}
+                            isLoading={actionLoading}
+                          >
+                            <XCircle className="w-4 h-4 mr-2" /> Cancel Event
+                          </Button>
                         </div>
                       )}
 
-                      <Button variant="ghost" className="w-full" onClick={handleShareEvent}>
-                        <Share2 className="w-4 h-4 mr-2" />
-                        Share Event
-                      </Button>
+                      {event.status === 'pending' && (
+                        <div className="space-y-3">
+                          {(() => {
+                            const { warning, blocking } = checkConflicts();
+                            return (
+                              <>
+                                {blocking.length > 0 && (
+                                  <div className="mb-4 p-4 rounded-2xl bg-red-50 border border-red-100 flex items-start space-x-3">
+                                    <XCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                                    <p className="text-xs font-bold text-red-700 leading-relaxed">
+                                      Cannot approve: overlaps with published event '{blocking[0].title}'.
+                                    </p>
+                                  </div>
+                                )}
+                                {blocking.length === 0 && warning.length > 0 && (
+                                  <div className="mb-4 p-4 rounded-2xl bg-amber-50 border border-amber-100 flex items-start space-x-3">
+                                    <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                                    <p className="text-xs font-bold text-amber-700 leading-relaxed">
+                                      Warning: overlaps with {warning.length} other pending event(s).
+                                    </p>
+                                  </div>
+                                )}
+                                
+                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 text-center mb-2">Moderation Actions</p>
+                                <Button 
+                                  className="w-full !py-3 bg-green-600 hover:bg-green-700 shadow-green-100"
+                                  onClick={() => handleAdminStatusUpdate('published')}
+                                  isLoading={actionLoading}
+                                  disabled={blocking.length > 0}
+                                >
+                                  <CheckCircle className="w-4 h-4 mr-2" /> Approve & Publish
+                                </Button>
+                                <Button 
+                                  variant="secondary"
+                                  className="w-full !py-3 text-red-600 border-red-100 hover:bg-red-50"
+                                  onClick={() => handleAdminStatusUpdate('rejected')}
+                                  isLoading={actionLoading}
+                                >
+                                  <XCircle className="w-4 h-4 mr-2" /> Reject Event
+                                </Button>
+                              </>
+                            );
+                          })()}
+                        </div>
+                      )}
+                      <div className="border-b border-gray-100 pt-2"></div>
                     </div>
-                  ) : (
-                    <div className="space-y-6">
-                      <div className="p-4 rounded-2xl bg-gray-100 text-gray-500 text-center font-bold">
-                        Registration Closed
+                  )}
+
+                  {/* Registration Logic */}
+                  {event.requires_registration ? (
+                    <>
+                      <div className="flex items-center justify-between p-4 rounded-2xl bg-gray-50 mb-6">
+                        <div className="flex items-center">
+                          <Users className="w-5 h-5 text-gray-400 mr-3" />
+                          <span className="font-bold text-gray-700">Available Slots</span>
+                        </div>
+                        <span className="text-primary-600 font-black">
+                          {availableSlots}
+                        </span>
                       </div>
-                      
-                      {/* Feedback Section for Past Events */}
-                      <div className="pt-6 border-t border-gray-100">
-                        <h4 className="text-lg font-semibold font-black text-gray-900 mb-4 tracking-tight">Event Feedback</h4>
-                        
-                        {!isAuthenticated ? (
-                          <p className="text-sm font-medium text-gray-500 bg-gray-50 p-4 rounded-2xl border border-dashed border-gray-200">
-                            Please <Link to="/login" className="text-primary-600 font-bold hover:underline">log in</Link> to share your feedback about this event.
-                          </p>
-                        ) : role !== 'student' ? (
-                          <p className="text-sm font-medium text-gray-500 bg-gray-50 p-4 rounded-2xl border border-dashed border-gray-200">
-                            Feedback is available only for registered participants.
-                          </p>
-                        ) : !userRegistration ? (
-                          <p className="text-sm font-medium text-gray-500 bg-gray-50 p-4 rounded-2xl border border-dashed border-gray-200">
-                            Feedback is available only for registered participants.
-                          </p>
-                        ) : userFeedback ? (
-                          <div className="p-4 rounded-2xl bg-primary-50 border border-primary-100">
-                            <div className="flex items-center mb-2">
-                              {[...Array(5)].map((_, i) => (
-                                <Star 
-                                  key={i} 
-                                  className={`w-4 h-4 ${i < userFeedback.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} 
-                                />
-                              ))}
+
+                      {!isPastEvent ? (
+                        <div className="space-y-4">
+                          {!isAuthenticated ? (
+                            <div className="space-y-4">
+                              <p className="text-sm font-bold text-gray-600 bg-gray-50 p-4 rounded-2xl border border-dashed border-gray-200 text-center leading-relaxed">
+                                Sign in to reserve your spot for this event. Available for students and professors.
+                              </p>
+                              <Link to="/login" state={{ from: { pathname: `/events/${id}` } }}>
+                                <Button className="w-full !py-4 shadow-primary-200 shadow-xl mt-2">
+                                  Sign In to Register
+                                </Button>
+                              </Link>
                             </div>
-                            <p className="text-xs font-black uppercase tracking-widest text-primary-700 mb-2">Your Feedback</p>
-                            <p className="text-sm font-medium text-gray-700 italic">"{userFeedback.comment || 'No comment provided.'}"</p>
-                          </div>
-                        ) : (
-                          <form onSubmit={handleSubmitFeedback} className="space-y-4">
-                            <div>
-                              <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">Rating</label>
-                              <div className="flex space-x-2">
-                                {[1, 2, 3, 4, 5].map((s) => (
-                                  <button
-                                    key={s}
-                                    type="button"
-                                    onClick={() => setRating(s)}
-                                    className="focus:outline-none transition-transform active:scale-90"
+                          ) : role === 'student' ? (
+                            <>
+                              {userRegistration ? (
+                                <div className="space-y-4">
+                                  <div className="p-4 rounded-2xl bg-green-50 border border-green-100 flex items-center space-x-3">
+                                    <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
+                                    <p className="text-sm font-bold text-green-700">You are registered!</p>
+                                  </div>
+                                  <Button 
+                                    variant="secondary"
+                                    className="w-full !py-4 border-red-100 text-red-600 hover:bg-red-50 hover:border-red-200 transition-all"
+                                    onClick={handleCancel}
+                                    isLoading={actionLoading}
                                   >
-                                    <Star 
-                                      className={`w-6 h-6 ${s <= rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200'}`} 
-                                    />
-                                  </button>
-                                ))}
-                              </div>
+                                    <XCircle className="w-4 h-4 mr-2" />
+                                    Cancel Registration
+                                  </Button>
+                                </div>
+                              ) : (
+                                <Button 
+                                  className="w-full !py-4 !text-base shadow-primary-200 shadow-xl"
+                                  onClick={handleRegister}
+                                  isLoading={actionLoading}
+                                  disabled={availableSlots === 0}
+                                >
+                                  {availableSlots === 0 ? 'Sold Out' : 'Register Now'}
+                                </Button>
+                              )}
+                            </>
+                          ) : (
+                            <div className="p-4 rounded-2xl bg-blue-50 border border-blue-100 text-center">
+                              <p className="text-sm font-bold text-blue-700 leading-relaxed">
+                                {role === 'admin' ? 'Admin View' : 'Organizer View'}
+                              </p>
+                              <p className="text-xs font-medium text-blue-600 mt-1">
+                                Registration is only available for university participants.
+                              </p>
                             </div>
-                            <div>
-                              <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">Your Thoughts</label>
-                              <textarea
-                                value={comment}
-                                onChange={(e) => setComment(e.target.value)}
-                                placeholder="What did you think of the event?"
-                                className="w-full p-4 rounded-2xl bg-gray-50 border border-gray-100 text-sm font-medium focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all min-h-[100px]"
-                              />
-                            </div>
-                            <Button 
-                              type="submit" 
-                              className="w-full !py-3 shadow-lg shadow-primary-100"
-                              isLoading={feedbackLoading}
-                            >
-                              Submit Feedback
-                            </Button>
-                          </form>
-                        )}
-                        
-                        {feedbackMessage.text && (
-                          <div className={`mt-4 p-4 rounded-2xl flex items-start space-x-3 ${
-                            feedbackMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
-                          }`}>
-                            {feedbackMessage.type === 'success' ? <CheckCircle className="w-5 h-5 shrink-0" /> : <AlertCircle className="w-5 h-5 shrink-0" />}
-                            <p className="text-sm font-bold">{feedbackMessage.text}</p>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="space-y-6">
+                          <div className="p-4 rounded-2xl bg-gray-100 text-gray-500 text-center font-bold">
+                            Registration Closed
                           </div>
-                        )}
-                      </div>
+                          
+                          {/* Feedback Section for Past Events */}
+                          <div className="pt-6 border-t border-gray-100">
+                            <h4 className="text-lg font-semibold font-black text-gray-900 mb-4 tracking-tight">Event Feedback</h4>
+                            
+                            {!isAuthenticated ? (
+                              <p className="text-sm font-medium text-gray-500 bg-gray-50 p-4 rounded-2xl border border-dashed border-gray-200">
+                                Please <Link to="/login" className="text-primary-600 font-bold hover:underline">log in</Link> to share your feedback about this event.
+                              </p>
+                            ) : role !== 'student' ? (
+                              <p className="text-sm font-medium text-gray-500 bg-gray-50 p-4 rounded-2xl border border-dashed border-gray-200">
+                                Feedback is available only for registered participants.
+                              </p>
+                            ) : !userRegistration ? (
+                              <p className="text-sm font-medium text-gray-500 bg-gray-50 p-4 rounded-2xl border border-dashed border-gray-200">
+                                Feedback is available only for registered participants.
+                              </p>
+                            ) : userFeedback ? (
+                              <div className="p-4 rounded-2xl bg-primary-50 border border-primary-100">
+                                <div className="flex items-center mb-2">
+                                  {[...Array(5)].map((_, i) => (
+                                    <Star 
+                                      key={i} 
+                                      className={`w-4 h-4 ${i < userFeedback.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} 
+                                    />
+                                  ))}
+                                </div>
+                                <p className="text-xs font-black uppercase tracking-widest text-primary-700 mb-2">Your Feedback</p>
+                                <p className="text-sm font-medium text-gray-700 italic">"{userFeedback.comment || 'No comment provided.'}"</p>
+                              </div>
+                            ) : (
+                              <form onSubmit={handleSubmitFeedback} className="space-y-4">
+                                <div>
+                                  <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">Rating</label>
+                                  <div className="flex space-x-2">
+                                    {[1, 2, 3, 4, 5].map((s) => (
+                                      <button
+                                        key={s}
+                                        type="button"
+                                        onClick={() => setRating(s)}
+                                        className="focus:outline-none transition-transform active:scale-90"
+                                      >
+                                        <Star 
+                                          className={`w-6 h-6 ${s <= rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200'}`} 
+                                        />
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">Your Thoughts</label>
+                                  <textarea
+                                    value={comment}
+                                    onChange={(e) => setComment(e.target.value)}
+                                    placeholder="What did you think of the event?"
+                                    className="w-full p-4 rounded-2xl bg-gray-50 border border-gray-100 text-sm font-medium focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all min-h-[100px]"
+                                  />
+                                </div>
+                                <Button 
+                                  type="submit" 
+                                  className="w-full !py-3 shadow-lg shadow-primary-100"
+                                  isLoading={feedbackLoading}
+                                >
+                                  Submit Feedback
+                                </Button>
+                              </form>
+                            )}
+                            
+                            {feedbackMessage.text && (
+                              <div className={`mt-4 p-4 rounded-2xl flex items-start space-x-3 ${
+                                feedbackMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                              }`}>
+                                {feedbackMessage.type === 'success' ? <CheckCircle className="w-5 h-5 shrink-0" /> : <AlertCircle className="w-5 h-5 shrink-0" />}
+                                <p className="text-sm font-bold">{feedbackMessage.text}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-center py-6">
+                      <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4 opacity-20" />
+                      <p className="font-bold text-gray-900 mb-1">No registration required</p>
+                      <p className="text-sm text-gray-500 font-medium">Just show up at the location!</p>
                     </div>
                   )}
 
@@ -788,13 +836,12 @@ const EventDetailsPage = () => {
                       <p className="text-sm font-bold">{registrationMessage.text}</p>
                     </div>
                   )}
+
+                  <Button variant="ghost" className="w-full mt-4" onClick={handleShareEvent}>
+                    <Share2 className="w-4 h-4 mr-2" />
+                    Share Event
+                  </Button>
                 </>
-              ) : (
-                <div className="text-center py-6">
-                  <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4 opacity-20" />
-                  <p className="font-bold text-gray-900 mb-1">No registration required</p>
-                  <p className="text-sm text-gray-500 font-medium">Just show up at the location!</p>
-                </div>
               )}
             </div>
           </SectionCard>

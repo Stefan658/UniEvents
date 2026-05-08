@@ -1,0 +1,11 @@
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+migrations/__pycache__
+instance
+.env
+.git
+.gitignore
+README.md
+Dockerfile

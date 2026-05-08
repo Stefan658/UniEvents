@@ -119,9 +119,9 @@ def get_event(event_id):
     # Visibility Logic
     is_admin = current_user and current_user.role and current_user.role.name == 'admin'
     is_owner = current_user and event.organizer_id == current_user.id
-    is_published = event.status in ['published', 'active']
+    is_publicly_accessible = event.status in ['published', 'active', 'cancelled']
     
-    if not (is_admin or is_owner or is_published):
+    if not (is_admin or is_owner or is_publicly_accessible):
         return jsonify({"error": "Event not found."}), 404 # Hide non-public events
 
     return jsonify(_serialize_event(event))

@@ -27,6 +27,7 @@ def _serialize_registration(registration):
         "event_start_at": registration.event.start_at.isoformat() if registration.event else None,
         "event_location": registration.event.location if registration.event else None,
         "event_participation_type": registration.event.participation_type if registration.event else None,
+        "event_status": registration.event.status if registration.event else None,
     }
 
 

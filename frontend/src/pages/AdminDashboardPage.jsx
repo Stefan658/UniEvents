@@ -126,6 +126,7 @@ const AdminDashboardPage = () => {
     if (activeTab === 'pending') return event.status === 'pending';
     if (activeTab === 'published') return event.status === 'published' || event.status === 'active';
     if (activeTab === 'rejected') return event.status === 'rejected';
+    if (activeTab === 'cancelled') return event.status === 'cancelled';
     return true;
   });
 
@@ -174,7 +175,7 @@ const AdminDashboardPage = () => {
           <div className="bg-gray-50/50 border-b border-gray-100 px-8 py-4 flex flex-wrap gap-4 items-center justify-between">
             <h2 className="text-xl font-semibold font-black text-gray-900 tracking-tight">Event Moderation</h2>
             <div className="flex bg-white p-1 rounded-xl border border-gray-200">
-              {['pending', 'published', 'rejected'].map((tab) => (
+              {['pending', 'published', 'rejected', 'cancelled'].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -305,16 +306,16 @@ const AdminDashboardPage = () => {
 
                             {activeTab === 'published' && (
                               <button 
-                                onClick={() => handleStatusUpdate(event.id, 'rejected')}
+                                onClick={() => handleStatusUpdate(event.id, 'cancelled')}
                                 disabled={actionLoading}
                                 className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
-                                title="Unpublish / Reject"
+                                title="Cancel Event"
                               >
                                 <XCircle className="w-5 h-5" />
                               </button>
                             )}
 
-                            {activeTab === 'rejected' && (
+                            {(activeTab === 'rejected' || activeTab === 'cancelled') && (
                               <button 
                                 onClick={() => handleStatusUpdate(event.id, 'published')}
                                 disabled={actionLoading || checkConflicts(event).blocking.length > 0}
