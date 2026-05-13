@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { QRCodeCanvas } from 'qrcode.react';
 import PageContainer from '../components/PageContainer';
 import Loader from '../components/Loader';
 import ErrorMessage from '../components/ErrorMessage';
@@ -33,6 +34,7 @@ import {
 const EventDetailsPage = () => {
   const { id } = useParams();
   const { user, isAuthenticated, role } = useAuth();
+  const qrRef = useRef(null);
   const [event, setEvent] = useState(null);
   const [materials, setMaterials] = useState([]);
   const [registrations, setRegistrations] = useState([]);
@@ -303,6 +305,29 @@ const EventDetailsPage = () => {
     setTimeout(() => {
       setRegistrationMessage({ type: '', text: '' });
     }, 5000);
+  };
+
+  const handleDownloadQR = () => {
+    const canvas = qrRef.current;
+    if (!canvas) {
+      console.error('QR canvas not found');
+      return;
+    }
+    
+    try {
+      const pngUrl = canvas
+        .toDataURL("image/png")
+        .replace("image/png", "image/octet-stream");
+      
+      const downloadLink = document.createElement("a");
+      downloadLink.href = pngUrl;
+      downloadLink.download = `unievents-event-${event.id}-public-qr.png`;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+    } catch (err) {
+      console.error('Failed to download QR code:', err);
+    }
   };
 
   const formatDate = (dateString) => {
@@ -849,6 +874,24 @@ const EventDetailsPage = () => {
                       {registrationMessage.type === 'success' ? <CheckCircle className="w-5 h-5 shrink-0" /> : <AlertCircle className="w-5 h-5 shrink-0" />}
                       <p className="text-sm font-bold">{registrationMessage.text}</p>
                     </div>
+                  )}
+
+                  <div style={{ display: 'none' }}>
+                    <QRCodeCanvas
+                      id="event-public-qr"
+                      ref={qrRef}
+                      value={`${window.location.origin}/events/${event.id}`}
+                      size={512}
+                      level={"H"}
+                      includeMargin={true}
+                    />
+                  </div>
+
+                  {(role === 'admin' || role === 'organizer') && (
+                    <Button variant="secondary" className="w-full mt-4" onClick={handleDownloadQR}>
+                      <Download className="w-4 h-4 mr-2" />
+                      Download Event QR
+                    </Button>
                   )}
 
                   <Button variant="ghost" className="w-full mt-4" onClick={handleShareEvent}>
