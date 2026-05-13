@@ -15,4 +15,5 @@ class Config:
     SMTP_USERNAME = os.getenv("SMTP_USERNAME")
     SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
     SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", "noreply@uni-events.ro")
-    SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "True").lower() == "true"
+    SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "True").lower() in ("true", "1", "yes", "on")
+    SMTP_AUTH_REQUIRED = os.getenv("SMTP_AUTH_REQUIRED", "True").lower() in ("true", "1", "yes", "on")

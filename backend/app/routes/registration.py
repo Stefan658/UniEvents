@@ -18,6 +18,7 @@ def _serialize_registration(registration):
         "user_id": registration.user_id,
         "event_id": registration.event_id,
         "status": registration.status,
+        "ticket_code": registration.ticket_code,
         "registered_at": registration.registered_at.isoformat()
         if registration.registered_at
         else None,

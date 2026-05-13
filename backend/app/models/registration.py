@@ -8,6 +8,7 @@ class Registration(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     event_id = db.Column(db.Integer, db.ForeignKey("events.id", ondelete='CASCADE'), nullable=False)
     status = db.Column(db.String(20), nullable=False)
+    ticket_code = db.Column(db.String(36), unique=True, index=True, nullable=True)
     registered_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     check_in_at = db.Column(db.DateTime, nullable=True)
     updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.utcnow)

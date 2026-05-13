@@ -1,3 +1,4 @@
+import uuid
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 
@@ -33,6 +34,7 @@ def create_registration(user_id, event_id):
             user_id=user_id,
             event_id=event_id,
             status="confirmed",
+            ticket_code=str(uuid.uuid4())
         )
         db.session.add(new_registration)
         db.session.commit()
@@ -41,7 +43,12 @@ def create_registration(user_id, event_id):
         email_status = "skipped"
         try:
             ics_content = calendar_service.generate_ics(event)
-            email_status = email_service.send_registration_confirmation(user, event, ics_content)
+            email_status = email_service.send_registration_confirmation(
+                user, 
+                event, 
+                ics_content=ics_content,
+                ticket_code=new_registration.ticket_code
+            )
         except Exception:
             email_status = "failed"
 
