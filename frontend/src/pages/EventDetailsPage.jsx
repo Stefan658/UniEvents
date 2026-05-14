@@ -330,9 +330,20 @@ const EventDetailsPage = () => {
     }
   };
 
+  const isSameDay = (date1, date2) => {
+    if (!date1 || !date2) return true;
+    const d1 = new Date(date1);
+    const d2 = new Date(date2);
+    return d1.getFullYear() === d2.getFullYear() &&
+           d1.getMonth() === d2.getMonth() &&
+           d1.getDate() === d2.getDate();
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return 'TBD';
-    return new Date(dateString).toLocaleDateString(undefined, { 
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Invalid Date';
+    return date.toLocaleDateString(undefined, { 
       weekday: 'long', 
       year: 'numeric', 
       month: 'long', 
@@ -342,16 +353,34 @@ const EventDetailsPage = () => {
 
   const formatTime = (dateString) => {
     if (!dateString) return 'TBD';
-    return new Date(dateString).toLocaleTimeString(undefined, { 
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Invalid Time';
+    return date.toLocaleTimeString(undefined, { 
       hour: '2-digit', 
       minute: '2-digit' 
     });
+  };
+
+  const formatFullDateTime = (dateString) => {
+    if (!dateString) return 'TBD';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Invalid Date';
+    return `${date.toLocaleDateString(undefined, { 
+      weekday: 'short', 
+      month: 'short', 
+      day: 'numeric',
+      year: 'numeric'
+    })}, ${date.toLocaleTimeString(undefined, { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    })}`;
   };
 
   if (loading) return <PageContainer><div className="py-20"><Loader /></div></PageContainer>;
   if (error) return <PageContainer><ErrorMessage message={error} /></PageContainer>;
   if (!event) return <PageContainer><ErrorMessage message="Event not found." /></PageContainer>;
 
+  const isMultiDay = !isSameDay(event.start_at, event.end_at);
   const isCancelled = event.status === 'cancelled';
 
   const canSeeMeetingLink = 
@@ -370,8 +399,6 @@ const EventDetailsPage = () => {
   const availableSlots = event.max_participants !== null && event.max_participants !== undefined
     ? Math.max(0, event.max_participants - confirmedCount) 
     : 'Unlimited';
-
-  const isPaidEvent = event?.is_free_entry === false;
 
   const hasTicketPrice =
     event?.ticket_price !== null &&
@@ -424,24 +451,49 @@ const EventDetailsPage = () => {
               </h1>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-                <div className="flex items-start space-x-4">
-                  <div className="bg-blue-50 p-3 rounded-2xl text-blue-600">
-                    <Calendar className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-1">Date</p>
-                    <p className="font-bold text-gray-900">{formatDate(event.start_at)}</p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-4">
-                  <div className="bg-purple-50 p-3 rounded-2xl text-purple-600">
-                    <Clock className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-1">Time</p>
-                    <p className="font-bold text-gray-900">{formatTime(event.start_at)} - {formatTime(event.end_at)}</p>
-                  </div>
-                </div>
+                {isMultiDay ? (
+                  <>
+                    <div className="flex items-start space-x-4">
+                      <div className="bg-blue-50 p-3 rounded-2xl text-blue-600">
+                        <Calendar className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-1">Starts</p>
+                        <p className="font-bold text-gray-900">{formatFullDateTime(event.start_at)}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start space-x-4">
+                      <div className="bg-purple-50 p-3 rounded-2xl text-purple-600">
+                        <Clock className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-1">Ends</p>
+                        <p className="font-bold text-gray-900">{formatFullDateTime(event.end_at)}</p>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-start space-x-4">
+                      <div className="bg-blue-50 p-3 rounded-2xl text-blue-600">
+                        <Calendar className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-1">Date</p>
+                        <p className="font-bold text-gray-900">{formatDate(event.start_at)}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start space-x-4">
+                      <div className="bg-purple-50 p-3 rounded-2xl text-purple-600">
+                        <Clock className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-1">Time</p>
+                        <p className="font-bold text-gray-900">{formatTime(event.start_at)} - {formatTime(event.end_at)}</p>
+                      </div>
+                    </div>
+                  </>
+                )}
                 <div className="flex items-start space-x-4">
                   <div className="bg-orange-50 p-3 rounded-2xl text-orange-600">
                     <MapPin className="w-6 h-6" />
