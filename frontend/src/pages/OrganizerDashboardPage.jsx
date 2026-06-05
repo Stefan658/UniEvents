@@ -83,12 +83,44 @@ const OrganizerDashboardPage = () => {
     navigate('/organizer/events/new', { state: { templateEvent: event } });
   };
 
+  const isSameDay = (date1, date2) => {
+    if (!date1 || !date2) return true;
+    const d1 = new Date(date1);
+    const d2 = new Date(date2);
+    return d1.getFullYear() === d2.getFullYear() &&
+           d1.getMonth() === d2.getMonth() &&
+           d1.getDate() === d2.getDate();
+  };
+
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString(undefined, { 
+    if (!dateString) return 'Date TBD';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Invalid Date';
+    return date.toLocaleDateString(undefined, { 
       month: 'short', 
       day: 'numeric', 
       year: 'numeric' 
     });
+  };
+
+  const formatDashboardDateRange = (start, end) => {
+    if (!start) return 'Date TBD';
+    if (!end || isSameDay(start, end)) return formatDate(start);
+    
+    const d1 = new Date(start);
+    const d2 = new Date(end);
+    
+    if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return 'Invalid Date Range';
+
+    const options = { month: 'short', day: 'numeric' };
+    const optionsWithYear = { year: 'numeric', month: 'short', day: 'numeric' };
+
+    // If same year
+    if (d1.getFullYear() === d2.getFullYear()) {
+      return `${d1.toLocaleDateString(undefined, options)} - ${d2.toLocaleDateString(undefined, optionsWithYear)}`;
+    }
+    
+    return `${d1.toLocaleDateString(undefined, optionsWithYear)} - ${d2.toLocaleDateString(undefined, optionsWithYear)}`;
   };
 
   // Summary statistics calculations
@@ -142,7 +174,7 @@ const OrganizerDashboardPage = () => {
                       {event.title}
                     </Link>
                     <div className="flex items-center text-[10px] font-black uppercase tracking-widest text-gray-400 mt-1">
-                      {event.category_name} • {formatDate(event.start_at)}
+                      {event.category_name} • {formatDashboardDateRange(event.start_at, event.end_at)}
                     </div>
                   </div>
                 </div>

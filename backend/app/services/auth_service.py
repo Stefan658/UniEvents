@@ -55,9 +55,9 @@ def login_or_register_student_google(email, first_name, last_name):
     Returns a JWT for the student.
     """
     normalized_email = email.strip().lower()
-    allowed_domains = ["@student.usv.ro", "@profesor.usv.ro"]
+    allowed_domains = ["@student.usv.ro", "@usv.ro", "@usm.ro", "@eed.usv.ro"]
     if not any(normalized_email.endswith(domain) for domain in allowed_domains):
-        raise ValueError("Invalid email. Must be a '@student.usv.ro' or '@profesor.usv.ro' address.")
+        raise ValueError("Invalid email. Must be a USV/USM institutional address.")
 
     user = User.query.filter_by(email=normalized_email).first()
 

@@ -112,14 +112,41 @@ const AdminDashboardPage = () => {
   const totalOrganizers = organizers.length;
   const totalRegistrations = Object.values(participantCounts).reduce((acc, count) => acc + count, 0);
 
+  const isSameDay = (date1, date2) => {
+    if (!date1 || !date2) return true;
+    const d1 = new Date(date1);
+    const d2 = new Date(date2);
+    return d1.getFullYear() === d2.getFullYear() &&
+           d1.getMonth() === d2.getMonth() &&
+           d1.getDate() === d2.getDate();
+  };
+
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString(undefined, { 
+    if (!dateString) return 'TBD';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Invalid Date';
+    return date.toLocaleDateString(undefined, { 
       month: 'short', 
       day: 'numeric', 
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  const formatDashboardDateRange = (start, end) => {
+    if (!start) return 'TBD';
+    const date1 = new Date(start);
+    if (isNaN(date1.getTime())) return 'Invalid Date';
+
+    if (!end || isSameDay(start, end)) {
+      return formatDate(start) + (end ? ` - ${new Date(end).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}` : '');
+    }
+    
+    const date2 = new Date(end);
+    if (isNaN(date2.getTime())) return 'Invalid Date Range';
+
+    return `${formatDate(start)} - ${formatDate(end)}`;
   };
 
   const filteredEvents = events.filter(event => {
@@ -238,7 +265,7 @@ const AdminDashboardPage = () => {
                           <div className="space-y-1">
                             <div className="flex items-center text-xs font-bold text-gray-600">
                               <Clock className="w-3 h-3 mr-2 text-gray-400" />
-                              {formatDate(event.start_at)}
+                              {formatDashboardDateRange(event.start_at, event.end_at)}
                             </div>
                             <div className="flex items-center text-xs font-bold text-gray-600">
                               <MapPin className="w-3 h-3 mr-2 text-gray-400" />

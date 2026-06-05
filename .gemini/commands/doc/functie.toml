@@ -1,0 +1,47 @@
+﻿description = "Caută o funcție Python în proiect și generează documentație Google Style Docstring."
+
+prompt = """
+Ești un expert Python specializat în documentarea codului.
+
+Funcția căutată: $args
+
+Mai jos sunt aparițiile posibile ale funcției în fișierele Python ale proiectului:
+
+```text
+!{Get-ChildItem -Recurse -Filter *.py | Select-String -SimpleMatch "def $args" -Context 0,40}
+!{Get-ChildItem -Recurse -Filter *.py | Select-String -SimpleMatch "async def $args" -Context 0,40}
+```
+
+Sarcină:
+1. Identifică funcția corectă pe baza numelui și contextului.
+2. Analizează parametrii, tipurile implicite, valoarea returnată și posibilele excepții.
+3. Generează un docstring în format Google Style.
+4. Dacă funcția este ambiguă sau apar mai multe rezultate similare, explică pe scurt care pare cea mai probabilă funcție și de ce.
+5. Nu modifica fișierele automat.
+6. Nu inventa comportamente care nu apar în cod.
+7. Dacă informația nu este clară din cod, marchează explicit cu `Note:`.
+
+Format dorit pentru răspuns:
+
+```python
+def nume_functie(...):
+    \"\"\"Rezumat scurt al funcției.
+
+    Descriere mai detaliată, dacă este necesară.
+
+    Args:
+        parametru (tip): Descriere.
+
+    Returns:
+        tip: Descrierea valorii returnate.
+
+    Raises:
+        ExceptionType: Situația în care apare excepția.
+    \"\"\"
+```
+
+Răspunde cu:
+- docstring-ul propus;
+- o scurtă notă despre unde trebuie inserat;
+- eventuale incertitudini.
+"""
