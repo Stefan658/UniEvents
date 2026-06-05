@@ -6,13 +6,14 @@ import Loader from '../components/Loader';
 import ErrorMessage from '../components/ErrorMessage';
 import Button from '../components/Button';
 import { getMyRegistrations, cancelRegistration } from '../api/registrations';
-import { Calendar, MapPin, Clock, ExternalLink, XCircle, Bookmark } from 'lucide-react';
+import { Calendar, MapPin, Clock, ExternalLink, XCircle, Bookmark, LayoutGrid, List } from 'lucide-react';
 
 const MyRegistrationsPage = () => {
   const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [viewMode, setViewMode] = useState('grid');
 
   const fetchRegistrations = async () => {
     try {
@@ -84,6 +85,35 @@ const MyRegistrationsPage = () => {
         <p className="text-gray-500 font-medium mt-2">Manage your upcoming event participations.</p>
       </div>
 
+      {!loading && !error && registrations.length > 0 && (
+        <div className="flex mb-12">
+          <div className="bg-white/50 backdrop-blur-sm p-1.5 rounded-2xl border border-gray-100 shadow-soft flex gap-1">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                viewMode === 'grid'
+                  ? 'bg-primary-600 text-white shadow-md'
+                  : 'text-gray-500 hover:bg-gray-50'
+              }`}
+            >
+              <LayoutGrid className="w-4 h-4" />
+              Cards
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                viewMode === 'list'
+                  ? 'bg-primary-600 text-white shadow-md'
+                  : 'text-gray-500 hover:bg-gray-50'
+              }`}
+            >
+              <List className="w-4 h-4" />
+              List
+            </button>
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div className="py-20"><Loader /></div>
       ) : error ? (
@@ -112,9 +142,9 @@ const MyRegistrationsPage = () => {
                   {activeRegistrations.length}
                 </span>
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-8' : 'flex flex-col gap-6'}>
                 {activeRegistrations.map((reg) => (
-                  <RegistrationCard key={reg.id} reg={reg} onCancel={handleCancel} actionLoading={actionLoading} />
+                  <RegistrationCard key={reg.id} reg={reg} onCancel={handleCancel} actionLoading={actionLoading} variant={viewMode === 'list' ? 'row' : 'card'} />
                 ))}
               </div>
             </div>
@@ -129,9 +159,9 @@ const MyRegistrationsPage = () => {
                   {cancelledRegistrations.length}
                 </span>
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-8' : 'flex flex-col gap-6'}>
                 {cancelledRegistrations.map((reg) => (
-                  <RegistrationCard key={reg.id} reg={reg} isCancelled />
+                  <RegistrationCard key={reg.id} reg={reg} isCancelled variant={viewMode === 'list' ? 'row' : 'card'} />
                 ))}
               </div>
             </div>
@@ -146,9 +176,9 @@ const MyRegistrationsPage = () => {
                   {pastRegistrations.length}
                 </span>
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-8' : 'flex flex-col gap-6'}>
                 {pastRegistrations.map((reg) => (
-                  <RegistrationCard key={reg.id} reg={reg} isPast />
+                  <RegistrationCard key={reg.id} reg={reg} isPast variant={viewMode === 'list' ? 'row' : 'card'} />
                 ))}
               </div>
             </div>
@@ -159,7 +189,9 @@ const MyRegistrationsPage = () => {
   );
 };
 
-const RegistrationCard = ({ reg, onCancel, actionLoading, isCancelled, isPast }) => {
+const RegistrationCard = ({ reg, onCancel, actionLoading, isCancelled, isPast, variant = 'card' }) => {
+  const isRow = variant === 'row';
+
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString(undefined, { 
       weekday: 'short',
@@ -181,9 +213,9 @@ const RegistrationCard = ({ reg, onCancel, actionLoading, isCancelled, isPast })
   };
 
   return (
-    <SectionCard className={`group transition-all flex flex-col ${isCancelled ? 'border-red-100 bg-red-50/10' : 'hover:border-primary-100'}`}>
-      <div className="flex-grow">
-        <div className="flex justify-between items-start mb-4">
+    <SectionCard className={`group transition-all flex flex-col ${isRow ? 'md:flex-row md:items-center' : ''} ${isCancelled ? 'border-red-100 bg-red-50/10' : 'hover:border-primary-100'}`}>
+      <div className={`flex-grow ${isRow ? 'md:flex md:items-center md:gap-8' : ''}`}>
+        <div className={`${isRow ? 'md:w-1/4 md:shrink-0' : 'flex justify-between items-start mb-4'}`}>
           <div className="flex flex-wrap gap-2">
             <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
               isCancelled 
@@ -202,37 +234,46 @@ const RegistrationCard = ({ reg, onCancel, actionLoading, isCancelled, isPast })
               {reg.is_free_entry ? 'Free' : reg.ticket_price ? `${formatPrice(reg.ticket_price)} RON` : 'Paid'}
             </span>
           </div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-            Registered on {new Date(reg.registered_at).toLocaleDateString()}
-          </p>
+          {!isRow && (
+            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+              Registered on {new Date(reg.registered_at).toLocaleDateString()}
+            </p>
+          )}
         </div>
         
-        <h3 className={`text-xl font-semibold font-black transition-colors mb-4 leading-tight ${
-          isCancelled ? 'text-gray-500' : 'text-gray-900 group-hover:text-primary-600'
-        }`}>
-          {reg.event_title}
-        </h3>
-        
-        <div className="space-y-3 mb-6">
-          <div className="flex items-center text-sm font-bold text-gray-600">
-            <Calendar className="w-4 h-4 mr-3 text-gray-400" />
-            {formatDate(reg.event_start_at)}
-          </div>
-          <div className="flex items-center text-sm font-bold text-gray-600">
-            <Clock className="w-4 h-4 mr-3 text-gray-400" />
-            {formatTime(reg.event_start_at)}
-          </div>
-          <div className="flex items-center text-sm font-bold text-gray-600">
-            <MapPin className="w-4 h-4 mr-3 text-gray-400" />
-            {reg.event_location} ({reg.event_participation_type})
+        <div className={isRow ? 'md:flex-grow' : ''}>
+          <h3 className={`text-xl font-semibold font-black transition-colors ${isRow ? 'mb-2' : 'mb-4'} leading-tight ${
+            isCancelled ? 'text-gray-500' : 'text-gray-900 group-hover:text-primary-600'
+          }`}>
+            {reg.event_title}
+          </h3>
+          
+          <div className={`${isRow ? 'flex flex-wrap gap-x-6 gap-y-2' : 'space-y-3 mb-6'}`}>
+            <div className="flex items-center text-sm font-bold text-gray-600">
+              <Calendar className="w-4 h-4 mr-3 text-gray-400" />
+              {formatDate(reg.event_start_at)}
+            </div>
+            <div className="flex items-center text-sm font-bold text-gray-600">
+              <Clock className="w-4 h-4 mr-3 text-gray-400" />
+              {formatTime(reg.event_start_at)}
+            </div>
+            <div className="flex items-center text-sm font-bold text-gray-600">
+              <MapPin className="w-4 h-4 mr-3 text-gray-400" />
+              {reg.event_location} ({reg.event_participation_type})
+            </div>
+            {isRow && (
+              <div className="flex items-center text-[10px] font-black uppercase tracking-widest text-gray-400">
+                Registered: {new Date(reg.registered_at).toLocaleDateString()}
+              </div>
+            )}
           </div>
         </div>
       </div>
       
-      <div className="flex space-x-3 pt-6 border-t border-gray-50">
+      <div className={`flex items-center space-x-3 ${isRow ? 'mt-6 md:mt-0 md:pl-6 md:border-l border-gray-100 shrink-0 md:w-[220px] md:justify-end' : 'pt-6 border-t border-gray-50'}`}>
         {!isPast && (
-          <Link to={`/events/${reg.event_id}`} className="flex-grow">
-            <Button variant={isCancelled ? "ghost" : "secondary"} className="w-full !py-2.5 text-xs">
+          <Link to={`/events/${reg.event_id}`} className={isRow ? "" : "flex-grow"}>
+            <Button variant={isCancelled ? "ghost" : "secondary"} className={`${isRow ? "px-6" : "w-full"} !py-2.5 text-xs whitespace-nowrap`}>
               <ExternalLink className="w-3.5 h-3.5 mr-2" />
               View Details
             </Button>
@@ -240,9 +281,9 @@ const RegistrationCard = ({ reg, onCancel, actionLoading, isCancelled, isPast })
         )}
         
         {isPast && !isCancelled && (
-          <Link to={`/events/${reg.event_id}#feedback`} className="flex-grow">
-            <Button variant="primary" className="w-full !py-2.5 text-xs">
-              Leave Feedback
+          <Link to={`/events/${reg.event_id}#feedback`} className={isRow ? "" : "flex-grow"}>
+            <Button variant="primary" className={`${isRow ? "px-6" : "w-full"} !py-2.5 text-xs whitespace-nowrap`}>
+              {reg.has_feedback ? "See Your Feedback" : "Leave Feedback"}
             </Button>
           </Link>
         )}
@@ -251,7 +292,7 @@ const RegistrationCard = ({ reg, onCancel, actionLoading, isCancelled, isPast })
           <button 
             onClick={() => onCancel(reg.id)}
             disabled={actionLoading}
-            className="p-2.5 rounded-xl border border-gray-100 text-gray-400 hover:text-red-600 hover:bg-red-50 hover:border-red-100 transition-all"
+            className="p-2.5 rounded-xl border border-gray-100 text-gray-400 hover:text-red-600 hover:bg-red-50 hover:border-red-100 transition-all shrink-0"
             title="Cancel Registration"
           >
             <XCircle className="w-5 h-5" />

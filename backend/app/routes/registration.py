@@ -141,6 +141,16 @@ def get_my_registrations(current_user):
     """Returns registrations for the currently authenticated user."""
     try:
         registrations = registration_service.get_registrations_for_user(current_user.id)
-        return jsonify([_serialize_registration(reg) for reg in registrations]), 200
+        
+        # Determine which events have feedback from this user
+        feedback_event_ids = {f.event_id for f in current_user.feedback_entries}
+        
+        serialized = []
+        for reg in registrations:
+            data = _serialize_registration(reg)
+            data["has_feedback"] = reg.event_id in feedback_event_ids
+            serialized.append(data)
+            
+        return jsonify(serialized), 200
     except Exception:
         return jsonify({"error": "An internal server error occurred."}), 500

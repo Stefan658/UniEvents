@@ -4,6 +4,7 @@ from backend.app.extensions import db
 from backend.app.models.event import Event
 from backend.app.models.user import User
 from backend.app.models.category import Category
+from backend.app.models.registration import Registration
 from sqlalchemy.orm import joinedload
 
 def create_event(data):
@@ -292,6 +293,61 @@ def search_events(filters):
     return query.all()
 
 
+def get_recommended_events(user_id, limit=6):
+    """
+    Retrieves personalized event recommendations for a user.
+
+    Logic:
+    1. Identifies categories from events where the user has 'confirmed' registrations.
+    2. Identifies all events where the user has any registration (to exclude them).
+    3. Queries upcoming 'published' events in those categories, excluding registered ones.
+    4. Returns an empty list if no interests are found or no matches exist.
+
+    Args:
+        user_id (int): The ID of the user to get recommendations for.
+        limit (int): The maximum number of events to return.
+
+    Returns:
+        list: A list of Event objects.
+    """
+    now = datetime.utcnow()
+
+    # 1. Get category interests from confirmed registrations
+    interests_query = (
+        db.session.query(Event.category_id)
+        .join(Registration, Registration.event_id == Event.id)
+        .filter(Registration.user_id == user_id)
+        .filter(Registration.status == 'confirmed')
+        .filter(Event.category_id.isnot(None))
+        .distinct()
+    )
+    category_ids = [r[0] for r in interests_query.all()]
+
+    if not category_ids:
+        return []
+
+    # 2. Get all event IDs where the user is already registered (to exclude)
+    registered_query = (
+        db.session.query(Registration.event_id)
+        .filter(Registration.user_id == user_id)
+    )
+    registered_event_ids = [r[0] for r in registered_query.all()]
+
+    # 3. Query recommended events
+    recommendations = (
+        Event.query.options(joinedload(Event.category), joinedload(Event.organizer))
+        .filter(Event.status == 'published')
+        .filter(Event.start_at > now)
+        .filter(Event.category_id.in_(category_ids))
+        .filter(Event.id.notin_(registered_event_ids))
+        .order_by(Event.start_at.asc())
+        .limit(limit)
+        .all()
+    )
+
+    return recommendations
+
+
 def get_calendar_events(from_date=None, to_date=None):
     """
     Retrieves events for a calendar view, optionally filtered by a date range.
@@ -316,3 +372,34 @@ def get_calendar_events(from_date=None, to_date=None):
         )
 
     return query.order_by(Event.start_at.asc()).all()
+
+
+def get_popular_upcoming_events(limit=6):
+    """
+    Retrieves the most popular upcoming events based on confirmed registrations.
+
+    Includes only 'published' events with a start date in the future.
+    Counts only registrations with status 'confirmed'.
+    Excludes events with 0 confirmed registrations.
+    Sorts by confirmed registration count (descending) and start date (ascending).
+
+    Args:
+        limit (int): The maximum number of events to return.
+
+    Returns:
+        list: A list of (Event, confirmed_count) tuples.
+    """
+    now = datetime.utcnow()
+
+    query = (
+        db.session.query(Event, func.count(Registration.id).label('confirmed_count'))
+        .outerjoin(Registration, (Registration.event_id == Event.id) & (Registration.status == 'confirmed'))
+        .filter(Event.status == 'published')
+        .filter(Event.start_at > now)
+        .group_by(Event.id)
+        .having(func.count(Registration.id) > 0)
+        .order_by(func.count(Registration.id).desc(), Event.start_at.asc())
+        .limit(limit)
+    )
+
+    return query.all()

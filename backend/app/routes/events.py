@@ -180,6 +180,37 @@ def get_calendar_events_route():
         return jsonify({"error": "An internal server error occurred."}), 500
 
 
+@events_bp.route("/api/events/popular", methods=["GET"])
+def get_popular_events():
+    """Returns a list of popular upcoming events."""
+    try:
+        results = event_service.get_popular_upcoming_events()
+        
+        serialized_events = []
+        for event, count in results:
+            data = _serialize_event(event)
+            data["confirmed_registrations_count"] = count
+            serialized_events.append(data)
+            
+        return jsonify(serialized_events), 200
+    except Exception:
+        return jsonify({"error": "An internal server error occurred."}), 500
+
+
+@events_bp.route("/api/events/recommended", methods=["GET"])
+@token_required
+def get_recommended_events_route(current_user):
+    """Returns personalized recommendations for the current user."""
+    try:
+        # Only students/participants get recommendations
+        if not current_user.role or current_user.role.name != 'student':
+            return jsonify([]), 200
+            
+        recommendations = event_service.get_recommended_events(current_user.id)
+        return jsonify([_serialize_event(event) for event in recommendations]), 200
+    except Exception:
+        return jsonify({"error": "An internal server error occurred."}), 500
+
 
 @events_bp.route("/api/events", methods=["POST"])
 def create_event():

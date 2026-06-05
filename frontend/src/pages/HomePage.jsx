@@ -3,15 +3,18 @@ import PageContainer from '../components/PageContainer';
 import EventCard from '../components/EventCard';
 import Loader from '../components/Loader';
 import ErrorMessage from '../components/ErrorMessage';
-import { getAllEvents } from '../api/events';
+import { getAllEvents, getPopularEvents, getRecommendedEvents } from '../api/events';
 import { getMyRegistrations } from '../api/registrations';
 import { useAuth } from '../contexts/AuthContext';
-import { Sparkles, Calendar } from 'lucide-react';
+import { Sparkles, Calendar, TrendingUp, LayoutGrid, List } from 'lucide-react';
 import heroBg from '../assets/backg-based-from-logo.png';
 import globalBg from '../assets/backg.png';
 
 const HomePage = () => {
   const { user, isAuthenticated, role } = useAuth();
+  const [viewMode, setViewMode] = useState('grid');
+  const [recommendedEvents, setRecommendedEvents] = useState([]);
+  const [popularEvents, setPopularEvents] = useState([]);
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [pastEvents, setPastEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,10 +23,35 @@ const HomePage = () => {
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        const data = await getAllEvents();
+        const fetchPromises = [
+          getAllEvents(),
+          getPopularEvents().catch(err => {
+            console.error('Failed to fetch popular events:', err);
+            return [];
+          })
+        ];
+
+        // Only fetch recommendations for participants
+        if (isAuthenticated && role === 'student') {
+          fetchPromises.push(
+            getRecommendedEvents().catch(err => {
+              console.error('Failed to fetch recommended events:', err);
+              return [];
+            })
+          );
+        }
+
+        const results = await Promise.all(fetchPromises);
+        const allEventsData = results[0];
+        const popularEventsData = results[1];
+        const recommendedEventsData = (isAuthenticated && role === 'student') ? results[2] : [];
+
         const now = new Date();
         
-        const upcoming = data.filter(event => 
+        setPopularEvents(popularEventsData);
+        setRecommendedEvents(recommendedEventsData);
+
+        const upcoming = allEventsData.filter(event => 
           new Date(event.start_at) >= now && 
           (event.status === 'published' || event.status === 'active')
         ).sort((a, b) => new Date(a.start_at) - new Date(b.start_at));
@@ -42,13 +70,10 @@ const HomePage = () => {
                 start_at: reg.event_start_at,
                 location: reg.event_location,
                 participation_type: reg.event_participation_type,
-                // We might lack some fields like category_name here if not in registration serializer
-                // But EventCard expects some fields. Let's check what reg has.
               }));
             
-            // To get full event data for the cards, we should filter the global data
             const myPastEventIds = new Set(pastRegs.map(r => r.id));
-            const personalizedPast = data.filter(event => myPastEventIds.has(event.id))
+            const personalizedPast = allEventsData.filter(event => myPastEventIds.has(event.id))
               .sort((a, b) => new Date(b.start_at) - new Date(a.start_at));
               
             setPastEvents(personalizedPast);
@@ -57,7 +82,6 @@ const HomePage = () => {
             setPastEvents([]);
           }
         } else {
-          // Guests, Admins, Organizers do not see personal past events
           setPastEvents([]);
         }
       } catch (err) {
@@ -122,20 +146,49 @@ const HomePage = () => {
               <p className="max-w-2xl mx-auto text-lg md:text-xl text-gray-500 font-normal leading-relaxed">
                 Stay connected with the latest workshops, seminars, and student-led activities at the "Ștefan cel Mare" University of Suceava
               </p>
-              </div>
-              </div>
+            </div>
+          </div>
 
-              {loading ? (
-              <div className="py-20 text-center">
+          {!loading && !error && (
+            <div className="flex justify-center mb-12">
+              <div className="bg-white/50 backdrop-blur-sm p-1.5 rounded-2xl border border-gray-100 shadow-soft flex gap-1">
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                    viewMode === 'grid'
+                      ? 'bg-primary-600 text-white shadow-md'
+                      : 'text-gray-500 hover:bg-gray-50'
+                  }`}
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                  Grid
+                </button>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                    viewMode === 'list'
+                      ? 'bg-primary-600 text-white shadow-md'
+                      : 'text-gray-500 hover:bg-gray-50'
+                  }`}
+                >
+                  <List className="w-4 h-4" />
+                  List
+                </button>
+              </div>
+            </div>
+          )}
+
+          {loading ? (
+            <div className="py-20 text-center">
               <Loader size="lg" />
               <p className="mt-4 text-gray-500 font-normal animate-pulse">Loading amazing events...</p>
-              </div>
-              ) : error ? (
-              <div className="max-w-2xl mx-auto">
+            </div>
+          ) : error ? (
+            <div className="max-w-2xl mx-auto">
               <ErrorMessage message={error} />
-              </div>
-              ) : (
-              <>
+            </div>
+          ) : (
+            <>
               <div className="mb-20">
                 <div className="flex items-center justify-between mb-10">
                   <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Upcoming Events</h2>
@@ -153,22 +206,59 @@ const HomePage = () => {
                     <p className="text-gray-400 font-bold text-lg">No upcoming events found. Check back soon!</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                  <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8' : 'flex flex-col gap-6'}>
                     {upcomingEvents.map((event) => (
-                      <EventCard key={event.id} event={event} />
+                      <EventCard key={event.id} event={event} variant={viewMode === 'list' ? 'row' : 'card'} />
                     ))}
                   </div>
                 )}
               </div>
+
+              {recommendedEvents.length > 0 && (
+                <div className="mb-20">
+                  <div className="flex items-center justify-between mb-10">
+                    <h2 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center">
+                      <Sparkles className="w-8 h-8 mr-3 text-primary-600" />
+                      Recommended for You
+                    </h2>
+                    <div className="h-1 flex-grow mx-8 bg-gray-100 rounded-full hidden md:block opacity-50"></div>
+                  </div>
+
+                  <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8' : 'flex flex-col gap-6'}>
+                    {recommendedEvents.map((event) => (
+                      <EventCard key={`rec-${event.id}`} event={event} variant={viewMode === 'list' ? 'row' : 'card'} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {popularEvents.length > 0 && (
+                <div className="mb-20">
+                  <div className="flex items-center justify-between mb-10">
+                    <h2 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center">
+                      <TrendingUp className="w-8 h-8 mr-3 text-primary-600" />
+                      Most Awaited Events
+                    </h2>
+                    <div className="h-1 flex-grow mx-8 bg-gray-100 rounded-full hidden md:block opacity-50"></div>
+                  </div>
+
+                  <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8' : 'flex flex-col gap-6'}>
+                    {popularEvents.map((event) => (
+                      <EventCard key={`popular-${event.id}`} event={event} variant={viewMode === 'list' ? 'row' : 'card'} />
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {pastEvents.length > 0 && (
                 <div className="mb-16">
                   <div className="flex items-center justify-between mb-10">
                     <h2 className="text-3xl font-bold text-gray-500 tracking-tight">Review Attended Events</h2>
                     <div className="h-1 flex-grow mx-8 bg-gray-100 rounded-full hidden md:block opacity-50"></div>
-                  </div>                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 opacity-90 grayscale-[50%] hover:grayscale-0 transition-all duration-500">
+                  </div>
+                  <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 opacity-90 grayscale-[50%] hover:grayscale-0 transition-all duration-500' : 'flex flex-col gap-6 opacity-90 grayscale-[50%] hover:grayscale-0 transition-all duration-500'}>
                     {pastEvents.map((event) => (
-                      <EventCard key={event.id} event={event} />
+                      <EventCard key={event.id} event={event} variant={viewMode === 'list' ? 'row' : 'card'} />
                     ))}
                   </div>
                 </div>
