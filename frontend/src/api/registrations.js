@@ -52,3 +52,17 @@ export const getMyRegistrations = async () => {
     throw error.response?.data?.error || 'Failed to fetch your registrations';
   }
 };
+
+export const getMyBadges = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await axiosClient.get('/users/me/badges', {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data?.error || 'Failed to fetch your badges';
+  }
+};

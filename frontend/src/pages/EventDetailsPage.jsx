@@ -169,12 +169,16 @@ const EventDetailsPage = () => {
       await fetchRegistrations();
       
       let message = 'Registration successful.';
-      if (response.email_status === 'sent') {
-        message += ' Confirmation email sent.';
-      } else if (response.email_status === 'skipped') {
-        message += ' Email confirmation is not configured in this environment.';
-      } else if (response.email_status === 'failed') {
-        message += ' Confirmation email could not be sent.';
+      if (response.data?.status === 'waitlisted') {
+        message = 'You have been added to the waitlist. We will notify you if a spot becomes available.';
+      } else {
+        if (response.email_status === 'sent') {
+          message += ' Confirmation email sent.';
+        } else if (response.email_status === 'skipped') {
+          message += ' Email confirmation is not configured in this environment.';
+        } else if (response.email_status === 'failed') {
+          message += ' Confirmation email could not be sent.';
+        }
       }
       
       setRegistrationMessage({ type: 'success', text: message });
@@ -197,7 +201,12 @@ const EventDetailsPage = () => {
   const handleCancel = async () => {
     if (!userRegistration) return;
     
-    if (!window.confirm('Are you sure you want to cancel your registration?')) return;
+    const isWaitlisted = userRegistration.status === 'waitlisted';
+    const confirmMessage = isWaitlisted 
+      ? 'Are you sure you want to leave the waitlist?' 
+      : 'Are you sure you want to cancel your registration?';
+
+    if (!window.confirm(confirmMessage)) return;
 
     setActionLoading(true);
     setRegistrationMessage({ type: '', text: '' });
@@ -208,12 +217,16 @@ const EventDetailsPage = () => {
       await fetchRegistrations();
       
       let message = 'Registration cancelled.';
-      if (response.email_status === 'sent') {
-        message += ' Cancellation email sent.';
-      } else if (response.email_status === 'skipped') {
-        message += ' Email cancellation is not configured in this environment.';
-      } else if (response.email_status === 'failed') {
-        message += ' Cancellation email could not be sent.';
+      if (isWaitlisted) {
+        message = 'You have left the waitlist.';
+      } else {
+        if (response.email_status === 'sent') {
+          message += ' Cancellation email sent.';
+        } else if (response.email_status === 'skipped') {
+          message += ' Email cancellation is not configured in this environment.';
+        } else if (response.email_status === 'failed') {
+          message += ' Cancellation email could not be sent.';
+        }
       }
       
       setRegistrationMessage({ type: 'success', text: message });
@@ -223,7 +236,7 @@ const EventDetailsPage = () => {
         setRegistrationMessage({ type: '', text: '' });
       }, 5000);
     } catch (err) {
-      setRegistrationMessage({ type: 'error', text: err || 'Cancellation failed.' });
+      setRegistrationMessage({ type: 'error', text: err || (isWaitlisted ? 'Failed to leave waitlist.' : 'Cancellation failed.') });
       // Also auto-hide error messages after 5 seconds
       setTimeout(() => {
         setRegistrationMessage({ type: '', text: '' });
@@ -799,28 +812,36 @@ const EventDetailsPage = () => {
                             <>
                               {userRegistration ? (
                                 <div className="space-y-4">
-                                  <div className="p-4 rounded-2xl bg-green-50 border border-green-100 flex items-center space-x-3">
-                                    <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
-                                    <p className="text-sm font-bold text-green-700">You are registered!</p>
-                                  </div>
-                                  <Button 
-                                    variant="secondary"
-                                    className="w-full !py-4 border-red-100 text-red-600 hover:bg-red-50 hover:border-red-200 transition-all"
+                                  {userRegistration.status === 'waitlisted' ? (
+                                    <div className="p-4 rounded-2xl bg-amber-50 border border-amber-100 flex items-start space-x-3">
+                                      <Clock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                                      <div>
+                                        <p className="text-sm font-bold text-amber-700">You are on the waitlist</p>
+                                        <p className="text-xs text-amber-600 mt-1">We will notify you if a spot becomes available.</p>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="p-4 rounded-2xl bg-green-50 border border-green-100 flex items-center space-x-3">
+                                      <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
+                                      <p className="text-sm font-bold text-green-700">You are registered!</p>
+                                    </div>
+                                  )}
+                                  <button 
+                                    className="w-full !py-4 rounded-xl border border-red-100 text-red-600 font-bold hover:bg-red-50 hover:border-red-200 transition-all flex items-center justify-center disabled:opacity-50"
                                     onClick={handleCancel}
-                                    isLoading={actionLoading}
+                                    disabled={actionLoading}
                                   >
                                     <XCircle className="w-4 h-4 mr-2" />
-                                    Cancel Registration
-                                  </Button>
+                                    {userRegistration.status === 'waitlisted' ? 'Cancel Waitlist' : 'Cancel Registration'}
+                                  </button>
                                 </div>
                               ) : (
                                 <Button 
                                   className="w-full !py-4 !text-base shadow-primary-200 shadow-xl"
                                   onClick={handleRegister}
                                   isLoading={actionLoading}
-                                  disabled={availableSlots === 0}
                                 >
-                                  {availableSlots === 0 ? 'Sold Out' : ctaButtonText}
+                                  {availableSlots === 0 ? 'Join Waitlist' : ctaButtonText}
                                 </Button>
                               )}
                             </>

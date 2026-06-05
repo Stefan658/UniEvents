@@ -5,21 +5,39 @@ import SectionCard from '../components/SectionCard';
 import Loader from '../components/Loader';
 import ErrorMessage from '../components/ErrorMessage';
 import Button from '../components/Button';
-import { getMyRegistrations, cancelRegistration } from '../api/registrations';
-import { Calendar, MapPin, Clock, ExternalLink, XCircle, Bookmark, LayoutGrid, List } from 'lucide-react';
+import { getMyRegistrations, cancelRegistration, getMyBadges } from '../api/registrations';
+import { Calendar, MapPin, Clock, ExternalLink, XCircle, Bookmark, LayoutGrid, List, Trophy, Heart, Briefcase, Code, MessageSquare, Dumbbell, Award, Sparkles } from 'lucide-react';
+
+const ICON_MAP = {
+  Trophy,
+  Heart,
+  Briefcase,
+  Code,
+  MessageSquare,
+  Dumbbell,
+  Award
+};
 
 const MyRegistrationsPage = () => {
   const [registrations, setRegistrations] = useState([]);
+  const [badges, setBadges] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [viewMode, setViewMode] = useState('grid');
 
-  const fetchRegistrations = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
-      const data = await getMyRegistrations();
-      setRegistrations(data);
+      const [regsData, badgesData] = await Promise.all([
+        getMyRegistrations(),
+        getMyBadges().catch(err => {
+          console.error("Failed to fetch badges", err);
+          return [];
+        })
+      ]);
+      setRegistrations(regsData);
+      setBadges(badgesData);
     } catch (err) {
       setError(err);
     } finally {
@@ -28,7 +46,7 @@ const MyRegistrationsPage = () => {
   };
 
   useEffect(() => {
-    fetchRegistrations();
+    fetchData();
   }, []);
 
   const handleCancel = async (regId) => {
@@ -61,9 +79,16 @@ const MyRegistrationsPage = () => {
     });
   };
 
+  const waitlistedRegistrations = registrations.filter(reg => 
+    (reg.event_status === 'published' || reg.event_status === 'active') && 
+    new Date(reg.event_start_at) >= new Date() &&
+    reg.status === 'waitlisted'
+  );
+
   const activeRegistrations = registrations.filter(reg => 
     (reg.event_status === 'published' || reg.event_status === 'active') && 
-    new Date(reg.event_start_at) >= new Date()
+    new Date(reg.event_start_at) >= new Date() &&
+    reg.status !== 'waitlisted'
   );
 
   const pastRegistrations = registrations.filter(reg => 
@@ -133,6 +158,91 @@ const MyRegistrationsPage = () => {
         </div>
       ) : (
         <div className="space-y-16">
+
+          {/* Badges Section */}
+          {badges.length > 0 && (
+            <div>
+              <h2 className="text-2xl font-black text-gray-900 mb-8 flex items-center">
+                <Award className="w-6 h-6 mr-3 text-yellow-500" />
+                Your Badges & Rewards
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {badges.map((badge) => {
+                  const IconComponent = ICON_MAP[badge.icon] || Award;
+                  return (
+                    <div 
+                      key={badge.code} 
+                      className={`relative overflow-hidden rounded-3xl border p-6 transition-all ${
+                        badge.earned 
+                          ? 'bg-gradient-to-br from-white to-amber-50/30 border-amber-200 shadow-soft hover:shadow-md' 
+                          : 'bg-gray-50 border-gray-100 opacity-75'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-4">
+                        <div className={`p-3 rounded-2xl ${badge.earned ? 'bg-amber-100 text-amber-600' : 'bg-gray-200 text-gray-400'}`}>
+                          <IconComponent className="w-6 h-6" />
+                        </div>
+                        <div className="text-right">
+                          <span className={`text-xs font-black uppercase tracking-wider ${badge.earned ? 'text-amber-600' : 'text-gray-400'}`}>
+                            {badge.earned ? 'Earned' : 'Locked'}
+                          </span>
+                          <p className="text-xs font-bold text-gray-400 mt-1">
+                            {badge.progress} / {badge.target}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <h3 className={`text-lg font-black mb-1 ${badge.earned ? 'text-gray-900' : 'text-gray-500'}`}>
+                        {badge.title}
+                      </h3>
+                      <p className="text-sm text-gray-500 font-medium mb-4 leading-relaxed">
+                        {badge.description}
+                      </p>
+                      
+                      {badge.earned && badge.reward && (
+                        <div className="mt-auto pt-4 border-t border-amber-100/50">
+                          <p className="text-xs font-bold text-amber-700 flex items-center">
+                            <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                            {badge.reward}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {/* Progress Bar for Locked Badges */}
+                      {!badge.earned && (
+                        <div className="mt-auto pt-4 border-t border-gray-200/50">
+                           <div className="w-full bg-gray-200 rounded-full h-1.5">
+                            <div 
+                              className="bg-gray-400 h-1.5 rounded-full transition-all duration-500" 
+                              style={{ width: `${Math.min((badge.progress / badge.target) * 100, 100)}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Waitlisted Events */}
+          {waitlistedRegistrations.length > 0 && (
+            <div>
+              <h2 className="text-2xl font-black text-amber-600 mb-8 flex items-center">
+                Waitlisted Events
+                <span className="ml-4 px-3 py-1 rounded-full bg-amber-50 text-amber-600 text-xs font-black">
+                  {waitlistedRegistrations.length}
+                </span>
+              </h2>
+              <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-8' : 'flex flex-col gap-6'}>
+                {waitlistedRegistrations.map((reg) => (
+                  <RegistrationCard key={reg.id} reg={reg} onCancel={handleCancel} actionLoading={actionLoading} variant={viewMode === 'list' ? 'row' : 'card'} isWaitlisted />
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Active Registrations */}
           {activeRegistrations.length > 0 && (
             <div>
@@ -189,7 +299,7 @@ const MyRegistrationsPage = () => {
   );
 };
 
-const RegistrationCard = ({ reg, onCancel, actionLoading, isCancelled, isPast, variant = 'card' }) => {
+const RegistrationCard = ({ reg, onCancel, actionLoading, isCancelled, isPast, isWaitlisted, variant = 'card' }) => {
   const isRow = variant === 'row';
 
   const formatDate = (dateString) => {
@@ -213,18 +323,20 @@ const RegistrationCard = ({ reg, onCancel, actionLoading, isCancelled, isPast, v
   };
 
   return (
-    <SectionCard className={`group transition-all flex flex-col ${isRow ? 'md:flex-row md:items-center' : ''} ${isCancelled ? 'border-red-100 bg-red-50/10' : 'hover:border-primary-100'}`}>
+    <SectionCard className={`group transition-all flex flex-col ${isRow ? 'md:flex-row md:items-center' : ''} ${isCancelled ? 'border-red-100 bg-red-50/10' : isWaitlisted ? 'border-amber-100 bg-amber-50/10' : 'hover:border-primary-100'}`}>
       <div className={`flex-grow ${isRow ? 'md:flex md:items-center md:gap-8' : ''}`}>
         <div className={`${isRow ? 'md:w-1/4 md:shrink-0' : 'flex justify-between items-start mb-4'}`}>
           <div className="flex flex-wrap gap-2">
             <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
               isCancelled 
                 ? 'bg-red-50 text-red-700 border-red-100' 
-                : isPast 
-                  ? 'bg-gray-100 text-gray-600 border-gray-200' 
-                  : 'bg-green-50 text-green-700 border-green-100'
+                : isWaitlisted
+                  ? 'bg-amber-100 text-amber-700 border-amber-200'
+                  : isPast 
+                    ? 'bg-gray-100 text-gray-600 border-gray-200' 
+                    : 'bg-green-50 text-green-700 border-green-100'
             }`}>
-              {isCancelled ? 'EVENT CANCELLED' : reg.status === 'confirmed' ? 'Confirmed' : reg.status}
+              {isCancelled ? 'EVENT CANCELLED' : isWaitlisted ? 'WAITLISTED' : reg.status === 'confirmed' ? 'Confirmed' : reg.status}
             </span>
             <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
               reg.is_free_entry 

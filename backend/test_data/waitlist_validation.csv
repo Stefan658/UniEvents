@@ -1,0 +1,5 @@
+email,first_name,last_name,event_title,expected_status
+waitlist.test1@student.usv.ro,Waitlist,Test1,Waitlist Validation Demo Event,confirmed
+waitlist.test2@student.usv.ro,Waitlist,Test2,Waitlist Validation Demo Event,confirmed
+waitlist.test3@student.usv.ro,Waitlist,Test3,Waitlist Validation Demo Event,confirmed
+waitlist.test4@student.usv.ro,Waitlist,Test4,Waitlist Validation Demo Event,waitlisted

@@ -19,38 +19,42 @@ def create_registration(user_id, event_id):
     if not event:
         raise ValueError(f"Event with ID {event_id} not found.")
 
-    # Check for available slots if max_participants is set
+    # Determine registration status based on capacity
+    registration_status = "confirmed"
+    
     if event.max_participants is not None:
-        active_registrations_count = Registration.query.filter(
+        # Count only confirmed registrations against capacity
+        confirmed_registrations_count = Registration.query.filter(
             Registration.event_id == event_id,
-            Registration.status.in_(["confirmed", "pending"])
+            Registration.status == "confirmed"
         ).count()
         
-        if active_registrations_count >= event.max_participants:
-            raise ValueError("Event is full.")
+        if confirmed_registrations_count >= event.max_participants:
+            registration_status = "waitlisted"
 
     try:
         new_registration = Registration(
             user_id=user_id,
             event_id=event_id,
-            status="confirmed",
-            ticket_code=str(uuid.uuid4())
+            status=registration_status,
+            ticket_code=str(uuid.uuid4()) if registration_status == "confirmed" else None
         )
         db.session.add(new_registration)
         db.session.commit()
         
-        # Send confirmation email
+        # Send confirmation email only for confirmed registrations
         email_status = "skipped"
-        try:
-            ics_content = calendar_service.generate_ics(event)
-            email_status = email_service.send_registration_confirmation(
-                user, 
-                event, 
-                ics_content=ics_content,
-                ticket_code=new_registration.ticket_code
-            )
-        except Exception:
-            email_status = "failed"
+        if registration_status == "confirmed":
+            try:
+                ics_content = calendar_service.generate_ics(event)
+                email_status = email_service.send_registration_confirmation(
+                    user, 
+                    event, 
+                    ics_content=ics_content,
+                    ticket_code=new_registration.ticket_code
+                )
+            except Exception:
+                email_status = "failed"
 
         return new_registration, email_status
     except IntegrityError:
@@ -117,7 +121,7 @@ def delete_registration(registration_id):
     return True, email_status
 
 
-ALLOWED_REGISTRATION_STATUSES = ["confirmed", "cancelled", "pending"]
+ALLOWED_REGISTRATION_STATUSES = ["confirmed", "cancelled", "pending", "waitlisted"]
 
 
 def update_registration_status(registration_id, status):

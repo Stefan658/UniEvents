@@ -7,6 +7,7 @@ from .material import material_bp
 from .registration import registration_bp
 from .reports import reports_bp
 from .users import users_bp
+from .assistant import assistant_bp
 
 __all__ = [
     "auth_bp",
@@ -18,4 +19,5 @@ __all__ = [
     "registration_bp",
     "reports_bp",
     "users_bp",
+    "assistant_bp",
 ]

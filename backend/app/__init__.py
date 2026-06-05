@@ -13,6 +13,7 @@ from backend.app.routes import (
     registration_bp,
     material_bp,
     users_bp,
+    assistant_bp,
 )
 
 
@@ -50,5 +51,6 @@ def create_app(config_class=Config):
     app.register_blueprint(registration_bp)
     app.register_blueprint(material_bp)
     app.register_blueprint(users_bp)
+    app.register_blueprint(assistant_bp)
 
     return app
