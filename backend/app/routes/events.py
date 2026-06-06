@@ -86,9 +86,9 @@ def _serialize_calendar_event(event):
 
 @events_bp.route("/api/events", methods=["GET"])
 def get_events():
-    """Returns a list of events based on user permissions."""
+    """Returns a list of events based on user permissions. Excludes 'nearby' events by default."""
     current_user = _get_current_user_optional()
-    query = Event.query.options(joinedload(Event.category), joinedload(Event.organizer))
+    query = Event.query.options(joinedload(Event.category), joinedload(Event.organizer)).join(User, Event.organizer_id == User.id)
 
     # Visibility Logic
     if not current_user or (current_user.role and current_user.role.name not in ['admin', 'organizer']):
@@ -102,8 +102,21 @@ def get_events():
         ))
     # Admin: no filter (sees all)
 
+    # Exclude nearby events for regular listing
+    query = query.filter(User.email.notilike('nearby.%'))
+
     events = query.order_by(Event.start_at.desc()).all()
     return jsonify([_serialize_event(event) for event in events])
+
+
+@events_bp.route("/api/events/nearby", methods=["GET"])
+def get_nearby_events_route():
+    """Returns a list of student-friendly events outside campus (Uni Nearby)."""
+    try:
+        events = event_service.get_nearby_events()
+        return jsonify([_serialize_event(event) for event in events]), 200
+    except Exception:
+        return jsonify({"error": "An internal server error occurred."}), 500
 
 
 @events_bp.route("/api/events/<int:event_id>", methods=["GET"])

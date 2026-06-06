@@ -252,21 +252,15 @@ def update_event_status(event_id, new_status):
     return event
 
 
-def search_events(filters):
+def search_events(filters, include_nearby=False):
     """
     Searches and filters events based on provided criteria.
-
-    Args:
-        filters (dict): A dictionary of query parameters for filtering.
-                        Supported keys: 'title', 'category_id', 'organizer_id',
-                        'participation_type', 'status', 'location'.
-
-    Returns:
-        list: A list of Event objects matching the criteria.
-    Raises:
-        ValueError: If a filter parameter has an invalid type.
+    By default, excludes 'nearby' events unless include_nearby is True.
     """
-    query = Event.query.options(joinedload(Event.category), joinedload(Event.organizer))
+    query = Event.query.options(joinedload(Event.category), joinedload(Event.organizer)).join(User, Event.organizer_id == User.id)
+
+    if not include_nearby:
+        query = query.filter(User.email.notilike('nearby.%'))
 
     if 'title' in filters and filters['title']:
         query = query.filter(Event.title.ilike(f"%{filters['title']}%"))
@@ -296,19 +290,7 @@ def search_events(filters):
 def get_recommended_events(user_id, limit=6):
     """
     Retrieves personalized event recommendations for a user.
-
-    Logic:
-    1. Identifies categories from events where the user has 'confirmed' registrations.
-    2. Identifies all events where the user has any registration (to exclude them).
-    3. Queries upcoming 'published' events in those categories, excluding registered ones.
-    4. Returns an empty list if no interests are found or no matches exist.
-
-    Args:
-        user_id (int): The ID of the user to get recommendations for.
-        limit (int): The maximum number of events to return.
-
-    Returns:
-        list: A list of Event objects.
+    Excludes 'nearby' events.
     """
     now = datetime.utcnow()
 
@@ -333,13 +315,15 @@ def get_recommended_events(user_id, limit=6):
     )
     registered_event_ids = [r[0] for r in registered_query.all()]
 
-    # 3. Query recommended events
+    # 3. Query recommended events (excluding nearby organizers)
     recommendations = (
         Event.query.options(joinedload(Event.category), joinedload(Event.organizer))
+        .join(User, Event.organizer_id == User.id)
         .filter(Event.status == 'published')
         .filter(Event.start_at > now)
         .filter(Event.category_id.in_(category_ids))
         .filter(Event.id.notin_(registered_event_ids))
+        .filter(User.email.notilike('nearby.%'))
         .order_by(Event.start_at.asc())
         .limit(limit)
         .all()
@@ -351,15 +335,6 @@ def get_recommended_events(user_id, limit=6):
 def get_calendar_events(from_date=None, to_date=None):
     """
     Retrieves events for a calendar view, optionally filtered by a date range.
-
-    An event is included if it overlaps with the given date range.
-
-    Args:
-        from_date (datetime, optional): The start of the date range.
-        to_date (datetime, optional): The end of the date range.
-
-    Returns:
-        list: A list of Event objects.
     """
     query = Event.query
 
@@ -377,29 +352,43 @@ def get_calendar_events(from_date=None, to_date=None):
 def get_popular_upcoming_events(limit=6):
     """
     Retrieves the most popular upcoming events based on confirmed registrations.
-
-    Includes only 'published' events with a start date in the future.
-    Counts only registrations with status 'confirmed'.
-    Excludes events with 0 confirmed registrations.
-    Sorts by confirmed registration count (descending) and start date (ascending).
-
-    Args:
-        limit (int): The maximum number of events to return.
-
-    Returns:
-        list: A list of (Event, confirmed_count) tuples.
+    Excludes 'nearby' events.
     """
     now = datetime.utcnow()
 
     query = (
         db.session.query(Event, func.count(Registration.id).label('confirmed_count'))
         .outerjoin(Registration, (Registration.event_id == Event.id) & (Registration.status == 'confirmed'))
+        .join(User, Event.organizer_id == User.id)
         .filter(Event.status == 'published')
         .filter(Event.start_at > now)
+        .filter(User.email.notilike('nearby.%'))
         .group_by(Event.id)
         .having(func.count(Registration.id) > 0)
         .order_by(func.count(Registration.id).desc(), Event.start_at.asc())
         .limit(limit)
     )
+
+    return query.all()
+
+
+def get_nearby_events(limit=None):
+    """
+    Retrieves upcoming student-friendly events outside campus (Uni Nearby).
+    Identified by organizer email prefix 'nearby.'.
+    """
+    now = datetime.utcnow()
+
+    query = (
+        Event.query.options(joinedload(Event.category), joinedload(Event.organizer))
+        .join(User, Event.organizer_id == User.id)
+        .filter(Event.status == 'published')
+        .filter(Event.start_at > now)
+        .filter(User.email.ilike('nearby.%'))
+        .order_by(Event.start_at.asc())
+    )
+
+    if limit:
+        query = query.limit(limit)
 
     return query.all()
