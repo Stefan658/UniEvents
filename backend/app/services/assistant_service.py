@@ -1,13 +1,54 @@
 import re
+import csv
+import os
+from pathlib import Path
 from datetime import datetime, timedelta
-from sqlalchemy import or_
+from sqlalchemy import or_, and_
 from sqlalchemy.orm import joinedload
 from backend.app.extensions import db
+from backend.app.models.user import User
 from backend.app.models.event import Event
 from backend.app.models.category import Category
 from backend.app.models.registration import Registration
 from backend.app.models.feedback import Feedback
 from backend.app.services import event_service
+
+# Knowledge Base Cache
+_kb_cache = None
+
+def _load_knowledge_base():
+    """Loads the USV knowledge base from CSV into memory."""
+    global _kb_cache
+    if _kb_cache is not None:
+        return _kb_cache
+
+    _kb_cache = []
+    # Path relative to project root or this file
+    possible_paths = [
+        Path("backend/test_data/usv_knowledge_base.csv"),
+        Path("backend/data/usv_knowledge_base.csv"),
+        Path(__file__).parent.parent.parent / "test_data" / "usv_knowledge_base.csv"
+    ]
+
+    csv_path = None
+    for p in possible_paths:
+        if p.exists():
+            csv_path = p
+            break
+
+    if not csv_path:
+        return []
+
+    try:
+        with open(csv_path, mode='r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                _kb_cache.append(row)
+    except Exception:
+        # Fail silently
+        pass
+    
+    return _kb_cache
 
 def remove_diacritics(text):
     """Replaces Romanian diacritics with base characters."""
@@ -21,11 +62,25 @@ def remove_diacritics(text):
 
 def detect_language(text):
     """Simple heuristic to detect if the query is in Romanian."""
-    ro_keywords = ['ce', 'care', 'sunt', 'evenimente', 'recomanzi', 'saptamana', 'locuri', 'pline', 'cariera', 'lista', 'asteptare', 'este', 'exista', 'am', 'mele', 'inscrierile', 'inscriere', 'badge', 'badge-uri', 'recompense', 'obtin']
+    ro_keywords = [
+        'ce', 'care', 'sunt', 'evenimente', 'recomanzi', 'saptamana', 'locuri', 
+        'pline', 'cariera', 'lista', 'asteptare', 'este', 'exista', 'am', 'mele', 
+        'inscrierile', 'inscriere', 'badge', 'badge-uri', 'recompense', 'obtin',
+        'arata', 'aratami', 'arata-mi', 'imi', 'cele', 'vreau', 'top', 'sportive',
+        'voluntariat', 'cultural', 'stiintific', 'conferinta', 'cum', 'e', 'viata',
+        'student', 'in', 'suceava', 'unde', 'pot', 'manca', 'mancare', 'fac',
+        'construiesc', 'de', 'la'
+    ]
     words = set(re.findall(r'\b\w+\b', text))
     if any(word in ro_keywords for word in words):
         return 'ro'
     return 'en'
+
+def _is_test_event(event):
+    """Detects if an event is a technical validation/test event."""
+    test_terms = ['waitlist validation', 'validation demo', 'demo event', 'test event']
+    title_lower = event.title.lower()
+    return any(term in title_lower for term in test_terms)
 
 def _serialize_assistant_event(event):
     """Compact serialization for the assistant response."""
@@ -40,7 +95,7 @@ def _serialize_assistant_event(event):
 
 def handle_assistant_message(message, current_user=None):
     """
-    Rule-based assistant logic.
+    Rule-based assistant logic refined for enriched corpus.
     Returns answer, suggestions, and events.
     """
     if not message or not isinstance(message, str):
@@ -56,22 +111,24 @@ def handle_assistant_message(message, current_user=None):
     if lang == 'ro':
         suggestions = [
             "Ce evenimente sunt populare?",
-            "Ce îmi recomanzi?",
-            "Ce evenimente am săptămâna asta?",
-            "Ce badge-uri am?"
+            "Ce workshop-uri IT sunt disponibile?",
+            "Ce facultăți are USV?",
+            "Ce facilități are campusul?",
+            "Ce îmi recomanzi?"
         ]
-        empty_msg = "Te rog să pui o întrebare despre UniEvents."
-        fallback_msg = "Nu am înțeles exact întrebarea. Poți întreba despre evenimente populare, evenimente online, workshop-uri IT, carieră sau lista de așteptare."
+        empty_msg = "Te rog să pui o întrebare despre UniEvents sau campusul USV."
+        fallback_msg = "Nu am înțeles exact întrebarea. Poți întreba despre evenimente populare, noutăți campus, facultăți, carieră sau activități studențești."
         login_req_msg = "Pentru această acțiune personalizată, te rog să te autentifici ca participant."
     else:
         suggestions = [
             "What events are popular?",
-            "What do you recommend?",
-            "What events do I have this week?",
-            "What badges do I have?"
+            "What IT workshops are available?",
+            "What faculties does USV have?",
+            "What is student life like in Suceava?",
+            "What do you recommend?"
         ]
-        empty_msg = "Please type a question about UniEvents."
-        fallback_msg = "I did not fully understand the question. You can ask about popular events, online events, IT workshops, career events, or waitlists."
+        empty_msg = "Please type a question about UniEvents or the USV campus."
+        fallback_msg = "I did not fully understand the question. You can ask about popular events, campus info, faculties, career, or student activities."
         login_req_msg = "Please log in as a participant to see personalized information."
 
     if not clean_message:
@@ -94,11 +151,63 @@ def handle_assistant_message(message, current_user=None):
                     return True
         return False
 
-    # Helper for base query
-    base_query = Event.query.options(joinedload(Event.category)).filter(
-        Event.status == 'published',
-        Event.start_at > now
-    )
+    # Helper to match knowledge base
+    def match_knowledge():
+        kb = _load_knowledge_base()
+        best_match = None
+        best_score = 0
+        
+        for row in kb:
+            kws_str = row['keywords_ro'] if lang == 'ro' else row['keywords_en']
+            kws = [k.strip() for k in kws_str.split(';') if k.strip()]
+            score = 0
+            
+            for kw in kws:
+                kw_norm = remove_diacritics(kw).lower()
+                if not kw_norm: continue
+                
+                # Full phrase match in message
+                if kw_norm in clean_message:
+                    score += len(kw_norm) * 2
+                
+                # Check for individual words if it's a multi-word keyword
+                if ' ' in kw_norm:
+                    for part in kw_norm.split():
+                        if len(part) > 2 and re.search(rf'\b{re.escape(part)}\b', clean_message):
+                            score += len(part)
+
+            if score > best_score:
+                best_score = score
+                best_match = row
+            elif score > 0 and score == best_score and best_match:
+                # Tie breaker: prefer official over guidance
+                if row.get('confidence') == 'official' and best_match.get('confidence') != 'official':
+                    best_match = row
+
+        if best_match and best_score >= 3: # Minimum threshold
+            ans = best_match['answer_ro'] if lang == 'ro' else best_match['answer_en']
+            
+            # Optional source note
+            source = best_match.get('source_reference')
+            if source:
+                note = f"\n\n(Sursă: {source})" if lang == 'ro' else f"\n\n(Source: {source})"
+                ans += note
+            
+            return ans
+        return None
+
+    # Base query for upcoming published events
+    # We exclude test/validation events from general discovery
+    test_event_patterns = ['%waitlist validation%', '%validation demo%', '%demo event%', '%test%']
+    
+    def get_discovery_query():
+        query = Event.query.options(joinedload(Event.category)).filter(
+            Event.status == 'published',
+            Event.start_at > now
+        )
+        for pattern in test_event_patterns:
+            query = query.filter(Event.title.notilike(pattern))
+        return query
 
     is_student = current_user and current_user.role and current_user.role.name == 'student'
 
@@ -108,7 +217,8 @@ def handle_assistant_message(message, current_user=None):
             return {"answer": login_req_msg, "suggestions": suggestions, "events": []}
 
         recommendations = event_service.get_recommended_events(current_user.id, limit=5)
-        events = [_serialize_assistant_event(e) for e in recommendations]
+        # Exclude test events from recommendations too
+        events = [_serialize_assistant_event(e) for e in recommendations if not _is_test_event(e)]
         if events:
             answer = "Ți-am găsit câteva evenimente recomandate pe baza participărilor tale." if lang == 'ro' else "I found a few events recommended based on your participation history."
         else:
@@ -145,11 +255,8 @@ def handle_assistant_message(message, current_user=None):
     # PERSONALIZED RULE 4 (Checking before general waitlist): My waitlist
     if has_keyword(['my waitlist', 'waitlisted', 'am i on a waitlist', 'sunt pe lista', 'lista mea de asteptare']):
         if not is_student:
-            # For waitlist, if they ask generally, they might still get the general rule. 
-            # But if they ask "AM I", they should get login req.
             if has_keyword(['am i', 'sunt', 'mea']):
                 return {"answer": login_req_msg, "suggestions": suggestions, "events": []}
-            # Else fall through to general waitlist rule
         else:
             results = (
                 db.session.query(Event)
@@ -174,7 +281,6 @@ def handle_assistant_message(message, current_user=None):
         if not is_student:
             return {"answer": login_req_msg, "suggestions": suggestions, "events": []}
 
-        # Summary logic similar to users.py
         total_confirmed = db.session.query(Registration).filter_by(user_id=current_user.id, status="confirmed").count()
         total_feedback = db.session.query(Feedback).filter_by(user_id=current_user.id).count()
 
@@ -182,7 +288,6 @@ def handle_assistant_message(message, current_user=None):
         if total_confirmed >= 3: earned.append("Campus Active")
         if total_feedback >= 1: earned.append("Feedback Contributor")
 
-        # Category summary
         cat_counts = db.session.query(Category.name, db.func.count(Registration.id))\
             .join(Event, Event.category_id == Category.id)\
             .join(Registration, Registration.event_id == Event.id)\
@@ -211,11 +316,24 @@ def handle_assistant_message(message, current_user=None):
 
         return {"answer": answer, "suggestions": suggestions, "events": []}
 
-    # RULE A: Popular Events
-    if has_keyword(['popular', 'populare', 'top', 'asteptate', 'most awaited']):
-        popular_results = event_service.get_popular_upcoming_events(limit=5)
-        # popular_results is a list of tuples (Event, count)
-        events = [_serialize_assistant_event(e[0]) for e in popular_results]
+    # RULE CV GUIDANCE: Intent override for KB guidance about CV/Portfolio
+    # RULE CV GUIDANCE: Intent override for KB guidance about CV/Portfolio
+    cv_guidance_keywords = [
+        'cum imi construiesc cv', 'cum imi fac cv', 'construiesc cv', 'fac cv', 'cv-ul', 'cv ul',
+        'how do i build my cv', 'how can i build my cv', 'build my resume', 'improve my resume',
+        'linkedin profile', 'portfolio'
+    ]
+    if has_keyword(cv_guidance_keywords):
+        kb_answer = match_knowledge()
+        if kb_answer:
+            return {"answer": kb_answer, "suggestions": suggestions, "events": []}
+
+    # RULE A: Popular / Trending Events
+
+    if has_keyword(['popular', 'populare', 'top', 'asteptate', 'most awaited', 'trending']):
+        popular_results = event_service.get_popular_upcoming_events(limit=10)
+        # Exclude test events from popular results
+        events = [_serialize_assistant_event(e[0]) for e in popular_results if not _is_test_event(e[0])][:5]
 
         if events:
             answer = "Am găsit câteva evenimente populare în UniEvents." if lang == 'ro' else "I found a few popular upcoming events."
@@ -225,13 +343,25 @@ def handle_assistant_message(message, current_user=None):
         return {"answer": answer, "suggestions": suggestions, "events": events}
 
     # RULE B: IT / Workshop / Tech
-    if has_keyword(['it', 'tech', 'tehnologie', 'tehnologii', 'workshop', 'atelier', 'coding', 'software', 'ai', 'inteligenta']):
-        results = base_query.join(Category).filter(
+    tech_keywords = [
+        'it', 'tech', 'tehnologie', 'tehnologii', 'workshop', 'workshops', 'atelier', 'coding', 
+        'software', 'ai', 'inteligenta', 'development', 'developer', 'programming', 'programare', 
+        'web', 'cloud', 'cybersecurity', 'securitate', 'react', 'python', 'flask', 'mobile', 
+        'flutter', 'robotics', 'robotica', 'embedded', 'iot', 'infrastructure'
+    ]
+    if has_keyword(tech_keywords):
+        # We use explicit word boundaries for short terms like 'it', 'ai' via has_keyword logic
+        # For the query, we use explicit matches to ensure relevance
+        tech_terms = [
+            'tech', 'software', 'coding', 'ai', 'programming', 'programare', 'web', 'cloud', 
+            'cybersecurity', 'securitate', 'react', 'python', 'flask', 'flutter', 'iot', 
+            'robotics', 'robotica', 'embedded'
+        ]
+        results = get_discovery_query().join(Category).filter(
             or_(
                 Category.name.in_(['Workshop', 'Conference']),
-                Event.title.ilike('%tech%'),
-                Event.title.ilike('%it%'),
-                Event.title.ilike('%software%')
+                *[Event.title.ilike(f"%{term}%") for term in tech_terms],
+                *[Event.description.ilike(f"%{term}%") for term in tech_terms]
             )
         ).order_by(Event.start_at.asc()).limit(5).all()
 
@@ -244,13 +374,16 @@ def handle_assistant_message(message, current_user=None):
         return {"answer": answer, "suggestions": suggestions, "events": events}
 
     # RULE C: Career Events
-    if has_keyword(['career', 'cariera', 'job', 'joburi', 'angajare', 'internship', 'stagiu']):
-        results = base_query.join(Category).filter(
+    career_keywords = [
+        'career', 'cariera', 'job', 'joburi', 'angajare', 'internship', 'stagiu', 
+        'cv', 'linkedin', 'interview', 'interviu', 'interviuri', 'career fair'
+    ]
+    if has_keyword(career_keywords):
+        career_terms = ['career', 'cariera', 'job', 'internship', 'cv', 'linkedin', 'interview', 'interviu']
+        results = get_discovery_query().join(Category).filter(
             or_(
                 Category.name == 'Career',
-                Event.title.ilike('%career%'),
-                Event.title.ilike('%cariera%'),
-                Event.title.ilike('%job%')
+                *[Event.title.ilike(f"%{term}%") for term in career_terms]
             )
         ).order_by(Event.start_at.asc()).limit(5).all()
 
@@ -262,9 +395,9 @@ def handle_assistant_message(message, current_user=None):
 
         return {"answer": answer, "suggestions": suggestions, "events": events}
 
-    # RULE D: Online Events
-    if has_keyword(['online', 'virtual', 'remote', 'distanta']):
-        results = base_query.filter(
+    # RULE D: Online / Hybrid Events
+    if has_keyword(['online', 'virtual', 'remote', 'distanta', 'distanta', 'hibrid', 'hybrid']):
+        results = get_discovery_query().filter(
             Event.participation_type.in_(['online', 'hybrid'])
         ).order_by(Event.start_at.asc()).limit(5).all()
 
@@ -276,29 +409,148 @@ def handle_assistant_message(message, current_user=None):
 
         return {"answer": answer, "suggestions": suggestions, "events": events}
 
-    # RULE E: Full / Waitlist
-    if has_keyword(['full', 'waitlist', 'waiting list', 'no spaces', 'spots', 'seats', 'available spots', 'plin', 'pline', 'lista de asteptare', 'asteptare', 'locuri', 'disponibil', 'disponibile']):
-        answer_ro = "Dacă un eveniment necesită înregistrare și este plin, vei avea opțiunea să apeși pe 'Join Waitlist' (Alătură-te listei de așteptare) pe pagina evenimentului. Te vom notifica dacă se eliberează un loc!"
-        answer_en = "If an event requires registration and is full, you will see a 'Join Waitlist' option on the event page. We will notify you if a spot becomes available!"
-        answer = answer_ro if lang == 'ro' else answer_en
-        return {"answer": answer, "suggestions": suggestions, "events": []}
-
-    # RULE F: FIESC
-    if has_keyword(['fiesc']):
-        results = base_query.filter(
+    # RULE G: Sport Events
+    sport_keywords = [
+        'sport', 'sports', 'sportive', 'fotbal', 'football', 'baschet', 'basketball', 
+        'sah', 'sah', 'chess', 'alergare', 'running', 'tenis', 'tennis', 'yoga'
+    ]
+    if has_keyword(sport_keywords):
+        results = get_discovery_query().join(Category).filter(
             or_(
-                Event.title.ilike('%fiesc%'),
-                Event.description.ilike('%fiesc%')
+                Category.name.in_(['Sport', 'Sports']),
+                *[Event.title.ilike(f"%{kw}%") for kw in ['sport', 'fotbal', 'baschet', 'sah', 'alergare', 'tenis', 'yoga', 'basketball', 'chess']]
             )
         ).order_by(Event.start_at.asc()).limit(5).all()
 
         events = [_serialize_assistant_event(e) for e in results]
         if events:
-            answer = "Iată evenimentele asociate cu FIESC:" if lang == 'ro' else "Here are the events associated with FIESC:"
+            answer = "Am găsit câteva evenimente sportive viitoare." if lang == 'ro' else "I found a few upcoming sports events."
         else:
-            answer = "Momentan nu am găsit evenimente viitoare organizate de sau asociate cu FIESC." if lang == 'ro' else "I couldn't find any upcoming events associated with FIESC at the moment."
-
+            answer = "Nu am găsit evenimente sportive pentru perioada următoare." if lang == 'ro' else "I couldn't find any sports events for the upcoming period."
         return {"answer": answer, "suggestions": suggestions, "events": events}
+
+    # RULE H: Volunteering Events
+    vol_keywords = ['voluntariat', 'voluntar', 'volunteering', 'volunteer', 'caritate', 'charity', 'donare', 'donation', 'ecologic', 'eco', 'ong', 'ngo']
+    if has_keyword(vol_keywords):
+        # We use Category mostly, and very specific keywords for other categories to avoid false positives (like 'eco' matching 'reconnect')
+        results = get_discovery_query().join(Category).filter(
+            or_(
+                Category.name == 'Volunteering',
+                Event.title.ilike('%voluntar%'),
+                Event.title.ilike('%charity%'),
+                Event.title.ilike('%donation%'),
+                Event.title.ilike('%donare%'),
+                Event.title.ilike('%blood donation%'),
+                Event.title.ilike('%eco clean-up%'),
+                Event.title.ilike('%ong%'),
+                Event.title.ilike('%ngo%')
+            )
+        ).order_by(Event.start_at.asc()).limit(5).all()
+
+        events = [_serialize_assistant_event(e) for e in results]
+        if events:
+            answer = "Am găsit câteva oportunități de voluntariat." if lang == 'ro' else "I found a few volunteering opportunities."
+        else:
+            answer = "Momentan nu sunt oportunități de voluntariat disponibile." if lang == 'ro' else "There are no volunteering opportunities available right now."
+        return {"answer": answer, "suggestions": suggestions, "events": events}
+
+    # RULE I: Academic Events
+    acad_keywords = ['academic', 'academice', 'research', 'seminar', 'stiintific', 'stiintifice', 'master', 'licenta', 'licenta', 'bachelor', 'thesis', 'cercetare']
+    if has_keyword(acad_keywords):
+        results = get_discovery_query().join(Category).filter(
+            or_(
+                Category.name == 'Academic',
+                *[Event.title.ilike(f"%{kw}%") for kw in ['academic', 'research', 'seminar', 'stiintific', 'cercetare', 'thesis']]
+            )
+        ).order_by(Event.start_at.asc()).limit(5).all()
+
+        events = [_serialize_assistant_event(e) for e in results]
+        if events:
+            answer = "Am găsit câteva evenimente academice viitoare." if lang == 'ro' else "I found a few upcoming academic events."
+        else:
+            answer = "Nu am găsit evenimente academice programate." if lang == 'ro' else "I couldn't find any scheduled academic events."
+        return {"answer": answer, "suggestions": suggestions, "events": events}
+
+    # RULE J: Social / Cultural Events
+    social_keywords = [
+        'social', 'cultural', 'culturale', 'cultura', 'cultura', 'culture', 'film', 'movie', 
+        'teatru', 'theatre', 'theater', 'arta', 'arta', 'art', 'board games', 
+        'jocuri', 'networking', 'mixer'
+    ]
+    if has_keyword(social_keywords):
+        results = get_discovery_query().join(Category).filter(
+            or_(
+                Category.name.in_(['Social', 'Cultural']),
+                *[Event.title.ilike(f"%{kw}%") for kw in ['social', 'cultur', 'film', 'teatru', 'arta', 'networking', 'mixer', 'movie']]
+            )
+        ).order_by(Event.start_at.asc()).limit(5).all()
+
+        events = [_serialize_assistant_event(e) for e in results]
+        if events:
+            answer = "Am găsit câteva evenimente sociale și culturale." if lang == 'ro' else "I found a few social and cultural events."
+        else:
+            answer = "Nu am găsit evenimente sociale sau culturale momentan." if lang == 'ro' else "I couldn't find any social or cultural events at the moment."
+        return {"answer": answer, "suggestions": suggestions, "events": events}
+
+    # RULE K: Conference Events
+    if has_keyword(['conference', 'conferences', 'conferinta', 'conferinte', 'conferințe', 'summit', 'simpozion', 'symposium']):
+        results = get_discovery_query().join(Category).filter(
+            or_(
+                Category.name == 'Conference',
+                *[Event.title.ilike(f"%{kw}%") for kw in ['conference', 'conferinta', 'summit', 'simpozion']]
+            )
+        ).order_by(Event.start_at.asc()).limit(5).all()
+
+        events = [_serialize_assistant_event(e) for e in results]
+        if events:
+            answer = "Am găsit câteva conferințe viitoare." if lang == 'ro' else "I found a few upcoming conferences."
+        else:
+            answer = "Momentan nu sunt conferințe planificate." if lang == 'ro' else "There are no conferences planned at the moment."
+        return {"answer": answer, "suggestions": suggestions, "events": events}
+
+    # RULE L: Faculty / Organizer queries
+    faculties = ['fdsa', 'feaa', 'fefs', 'fia', 'fiesc', 'fimar', 'fig', 'flsc', 'fmsb', 'fs', 'fsed']
+    found_faculty = None
+    for f in faculties:
+        if has_keyword([f]):
+            found_faculty = f.upper()
+            break
+    
+    # We only trigger event discovery for faculty if user asks about "events", "organizes", "has"
+    # or if no informational keywords like "what is", "despre", "ce este" are present.
+    # This helps routing informational queries to the Knowledge Base later.
+    event_intent_keywords = [
+        'eveniment', 'evenimente', 'organizeaza', 'are', 'disponibile', 'calendar', 'program',
+        'events', 'organizes', 'has', 'available', 'schedule'
+    ]
+    
+    if found_faculty and (has_keyword(event_intent_keywords) or not has_keyword(['ce este', 'cine este', 'despre', 'what is', 'who is', 'about'])):
+        results = get_discovery_query().join(User, Event.organizer_id == User.id).filter(
+            or_(
+                Event.title.ilike(f"%{found_faculty}%"),
+                Event.description.ilike(f"%{found_faculty}%"),
+                User.email.ilike(f"%{found_faculty}%"),
+                User.first_name.ilike(f"%{found_faculty}%")
+            )
+        ).order_by(Event.start_at.asc()).limit(5).all()
+
+        events = [_serialize_assistant_event(e) for e in results]
+        if events:
+            answer = f"Iată evenimentele asociate cu {found_faculty}:" if lang == 'ro' else f"Here are the events associated with {found_faculty}:"
+            return {"answer": answer, "suggestions": suggestions, "events": events}
+        # If no events found, we continue to see if Knowledge Base has info about the faculty
+
+    # RULE E: Full / Waitlist
+    if has_keyword(['waitlist', 'waiting list', 'full', 'sold out', 'no spaces', 'no seats', 'no spots', 'available spots', 'lista de asteptare', 'asteptare', 'plin', 'pline', 'fara locuri', 'nu mai sunt locuri']):
+        answer_ro = "Dacă un eveniment necesită înregistrare și este plin, vei avea opțiunea să apeși pe 'Join Waitlist' (Alătură-te listei de așteptare) pe pagina evenimentului. Te vom notifica dacă se eliberează un loc!"
+        answer_en = "If an event requires registration and is full, you will see a 'Join Waitlist' option on the event page. We will notify you if a spot becomes available!"
+        answer = answer_ro if lang == 'ro' else answer_en
+        return {"answer": answer, "suggestions": suggestions, "events": []}
+
+    # RULE KNOWLEDGE BASE: General information about USV and Suceava
+    kb_answer = match_knowledge()
+    if kb_answer:
+        return {"answer": kb_answer, "suggestions": suggestions, "events": []}
 
     # Fallback
     return {
@@ -306,4 +558,3 @@ def handle_assistant_message(message, current_user=None):
         "suggestions": suggestions,
         "events": []
     }
-
