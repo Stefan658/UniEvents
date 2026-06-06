@@ -7,6 +7,7 @@ import { getAllEvents, getPopularEvents, getRecommendedEvents } from '../api/eve
 import { getMyRegistrations } from '../api/registrations';
 import { useAuth } from '../contexts/AuthContext';
 import { Sparkles, Calendar, TrendingUp, LayoutGrid, List } from 'lucide-react';
+import AssistantWidget from '../components/AssistantWidget';
 import heroBg from '../assets/backg-based-from-logo.png';
 import globalBg from '../assets/backg.png';
 
@@ -267,6 +268,7 @@ const HomePage = () => {
           )}
         </PageContainer>
       </div>
+      {(role !== 'organizer' && role !== 'admin') && <AssistantWidget />}
     </div>
   );
 };
