@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
 import PageContainer from '../components/PageContainer';
 import EventCard from '../components/EventCard';
 import Loader from '../components/Loader';
@@ -6,16 +7,19 @@ import ErrorMessage from '../components/ErrorMessage';
 import { getAllEvents, getPopularEvents, getRecommendedEvents } from '../api/events';
 import { getMyRegistrations } from '../api/registrations';
 import { useAuth } from '../contexts/AuthContext';
-import { Sparkles, Calendar, TrendingUp, LayoutGrid, List } from 'lucide-react';
+import { Sparkles, Calendar, TrendingUp, LayoutGrid, List, X, Search } from 'lucide-react';
 import AssistantWidget from '../components/AssistantWidget';
 import heroBg from '../assets/backg-based-from-logo.png';
 import globalBg from '../assets/backg.png';
 
-const INITIAL_VISIBLE_COUNT = 6;
-const VISIBLE_INCREMENT = 6;
+const INITIAL_VISIBLE_COUNT = 10;
+const VISIBLE_INCREMENT = 10;
 
 const HomePage = () => {
   const { user, isAuthenticated, role } = useAuth();
+  const [searchParams] = useSearchParams();
+  const searchQuery = searchParams.get('q') || '';
+
   const [viewMode, setViewMode] = useState('grid');
   const [recommendedEvents, setRecommendedEvents] = useState([]);
   const [popularEvents, setPopularEvents] = useState([]);
@@ -30,6 +34,14 @@ const HomePage = () => {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Reset visible counts when search changes
+  useEffect(() => {
+    setUpcomingVisible(INITIAL_VISIBLE_COUNT);
+    setRecommendedVisible(INITIAL_VISIBLE_COUNT);
+    setPopularVisible(INITIAL_VISIBLE_COUNT);
+    setPastVisible(INITIAL_VISIBLE_COUNT);
+  }, [searchQuery]);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -105,12 +117,30 @@ const HomePage = () => {
     fetchEvents();
   }, [isAuthenticated, role]);
 
+  const filterEvents = (eventsList) => {
+    if (!searchQuery) return eventsList;
+    const q = searchQuery.toLowerCase();
+    return eventsList.filter(e => 
+      e.title?.toLowerCase().includes(q) ||
+      e.description?.toLowerCase().includes(q) ||
+      e.category_name?.toLowerCase().includes(q) ||
+      e.location?.toLowerCase().includes(q) ||
+      e.organizer_full_name?.toLowerCase().includes(q) ||
+      e.participation_type?.toLowerCase().includes(q)
+    );
+  };
+
+  const filteredUpcoming = useMemo(() => filterEvents(upcomingEvents), [upcomingEvents, searchQuery]);
+  const filteredPopular = useMemo(() => filterEvents(popularEvents), [popularEvents, searchQuery]);
+  const filteredPast = useMemo(() => filterEvents(pastEvents), [pastEvents, searchQuery]);
+  const filteredRecommended = useMemo(() => filterEvents(recommendedEvents), [recommendedEvents, searchQuery]);
+
   return (
     <div className="relative">
       <div className="relative z-10">
         <PageContainer>
           <div className="relative mb-24 pt-20 pb-28 overflow-hidden rounded-[4rem] bg-white border border-gray-100/50 shadow-soft">
-            {/* Hero Background Layer - Restored backg-based-from-logo.png */}
+            {/* Hero Background Layer */}
             <div 
               className="absolute inset-0 z-0 opacity-90 brightness-[0.95] contrast-[1.2] saturate-[1.6]"
               style={{ 
@@ -142,7 +172,6 @@ const HomePage = () => {
                 border: '1px solid rgba(255,255,255,0.2)'
               }}
             >
-              {/* Subtle Radial Depth Glow */}
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary-400/10 to-transparent -z-20 blur-3xl rounded-full"></div>
               
               <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-white/40 backdrop-blur-md text-primary-700 text-xs font-bold uppercase tracking-wider mb-10 border border-white/60 shadow-sm">
@@ -161,7 +190,29 @@ const HomePage = () => {
           </div>
 
           {!loading && !error && (
-            <div className="flex justify-center mb-12">
+            <div className="flex flex-col items-center mb-12 gap-6">
+              {searchQuery && (
+                <div className="flex flex-col items-center animate-in fade-in slide-in-from-top-4 duration-500">
+                  <div className="inline-flex items-center px-6 py-3 rounded-[2rem] bg-primary-50 border border-primary-100 shadow-sm">
+                    <Search className="w-4 h-4 text-primary-600 mr-3" />
+                    <span className="text-gray-600 font-medium">
+                      Search results for <span className="text-primary-700 font-bold">"{searchQuery}"</span>
+                    </span>
+                    <div className="w-px h-4 bg-primary-200 mx-4"></div>
+                    <Link 
+                      to="/" 
+                      className="text-primary-600 hover:text-primary-800 font-bold text-sm flex items-center group"
+                    >
+                      Clear
+                      <X className="w-4 h-4 ml-1.5 group-hover:rotate-90 transition-transform" />
+                    </Link>
+                  </div>
+                  {(filteredUpcoming.length === 0 && filteredPast.length === 0 && filteredPopular.length === 0) && (
+                    <p className="mt-8 text-gray-400 font-medium italic">No matches found across any category.</p>
+                  )}
+                </div>
+              )}
+
               <div className="bg-white/50 backdrop-blur-sm p-1.5 rounded-2xl border border-gray-100 shadow-soft flex gap-1">
                 <button
                   onClick={() => setViewMode('grid')}
@@ -205,32 +256,34 @@ const HomePage = () => {
                   <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Upcoming Events</h2>
                   <div className="h-1 flex-grow mx-8 bg-gray-100 rounded-full hidden md:block opacity-50"></div>
                   <span className="text-sm font-semibold text-primary-600 bg-primary-50 px-4 py-1.5 rounded-xl border border-primary-100">
-                    {upcomingEvents.length} Upcoming
+                    {filteredUpcoming.length} {searchQuery ? 'Matches' : 'Upcoming'}
                   </span>
                 </div>
 
-                {upcomingEvents.length === 0 ? (
+                {filteredUpcoming.length === 0 ? (
                   <div className="text-center py-24 bg-white rounded-[2rem] border-2 border-dashed border-gray-100 shadow-sm">
                     <div className="bg-gray-50 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                      <Calendar className="w-8 h-8 text-gray-300" />
+                      {searchQuery ? <Search className="w-8 h-8 text-gray-300" /> : <Calendar className="w-8 h-8 text-gray-300" />}
                     </div>
-                    <p className="text-gray-400 font-bold text-lg">No upcoming events found. Check back soon!</p>
+                    <p className="text-gray-400 font-bold text-lg">
+                      {searchQuery ? `No events matching "${searchQuery}" found.` : 'No upcoming events found. Check back soon!'}
+                    </p>
                   </div>
                 ) : (
                   <>
                     <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8' : 'flex flex-col gap-6'}>
-                      {upcomingEvents.slice(0, upcomingVisible).map((event) => (
+                      {filteredUpcoming.slice(0, upcomingVisible).map((event) => (
                         <EventCard key={event.id} event={event} variant={viewMode === 'list' ? 'row' : 'card'} />
                       ))}
                     </div>
                     
-                    {upcomingEvents.length > upcomingVisible && (
+                    {filteredUpcoming.length > upcomingVisible && (
                       <div className="mt-12 flex justify-center">
                         <button
                           onClick={() => setUpcomingVisible(prev => prev + VISIBLE_INCREMENT)}
                           className="px-8 py-3 bg-white border border-gray-200 text-primary-600 font-bold rounded-2xl shadow-soft hover:shadow-md hover:border-primary-100 hover:bg-primary-50 transition-all active:scale-95 text-sm"
                         >
-                          See more events ({upcomingEvents.length - upcomingVisible} left)
+                          See more events ({filteredUpcoming.length - upcomingVisible} left)
                         </button>
                       </div>
                     )}
@@ -238,7 +291,7 @@ const HomePage = () => {
                 )}
               </div>
 
-              {recommendedEvents.length > 0 && (
+              {filteredRecommended.length > 0 && !searchQuery && (
                 <div className="mb-20">
                   <div className="flex items-center justify-between mb-10">
                     <h2 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center">
@@ -249,25 +302,25 @@ const HomePage = () => {
                   </div>
 
                   <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8' : 'flex flex-col gap-6'}>
-                    {recommendedEvents.slice(0, recommendedVisible).map((event) => (
+                    {filteredRecommended.slice(0, recommendedVisible).map((event) => (
                       <EventCard key={`rec-${event.id}`} event={event} variant={viewMode === 'list' ? 'row' : 'card'} />
                     ))}
                   </div>
 
-                  {recommendedEvents.length > recommendedVisible && (
+                  {filteredRecommended.length > recommendedVisible && (
                     <div className="mt-12 flex justify-center">
                       <button
                         onClick={() => setRecommendedVisible(prev => prev + VISIBLE_INCREMENT)}
                         className="px-8 py-3 bg-white border border-gray-200 text-primary-600 font-bold rounded-2xl shadow-soft hover:shadow-md hover:border-primary-100 hover:bg-primary-50 transition-all active:scale-95 text-sm"
                       >
-                        See more recommendations ({recommendedEvents.length - recommendedVisible} left)
+                        See more recommendations ({filteredRecommended.length - recommendedVisible} left)
                       </button>
                     </div>
                   )}
                 </div>
               )}
 
-              {popularEvents.length > 0 && (
+              {filteredPopular.length > 0 && (
                 <div className="mb-20">
                   <div className="flex items-center justify-between mb-10">
                     <h2 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center">
@@ -278,43 +331,43 @@ const HomePage = () => {
                   </div>
 
                   <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8' : 'flex flex-col gap-6'}>
-                    {popularEvents.slice(0, popularVisible).map((event) => (
+                    {filteredPopular.slice(0, popularVisible).map((event) => (
                       <EventCard key={`popular-${event.id}`} event={event} variant={viewMode === 'list' ? 'row' : 'card'} />
                     ))}
                   </div>
 
-                  {popularEvents.length > popularVisible && (
+                  {filteredPopular.length > popularVisible && (
                     <div className="mt-12 flex justify-center">
                       <button
                         onClick={() => setPopularVisible(prev => prev + VISIBLE_INCREMENT)}
                         className="px-8 py-3 bg-white border border-gray-200 text-primary-600 font-bold rounded-2xl shadow-soft hover:shadow-md hover:border-primary-100 hover:bg-primary-50 transition-all active:scale-95 text-sm"
                       >
-                        See more events ({popularEvents.length - popularVisible} left)
+                        See more events ({filteredPopular.length - popularVisible} left)
                       </button>
                     </div>
                   )}
                 </div>
               )}
 
-              {pastEvents.length > 0 && (
+              {filteredPast.length > 0 && (
                 <div className="mb-16">
                   <div className="flex items-center justify-between mb-10">
                     <h2 className="text-3xl font-bold text-gray-500 tracking-tight">Review Attended Events</h2>
                     <div className="h-1 flex-grow mx-8 bg-gray-100 rounded-full hidden md:block opacity-50"></div>
                   </div>
                   <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 opacity-90 grayscale-[50%] hover:grayscale-0 transition-all duration-500' : 'flex flex-col gap-6 opacity-90 grayscale-[50%] hover:grayscale-0 transition-all duration-500'}>
-                    {pastEvents.slice(0, pastVisible).map((event) => (
+                    {filteredPast.slice(0, pastVisible).map((event) => (
                       <EventCard key={event.id} event={event} variant={viewMode === 'list' ? 'row' : 'card'} />
                     ))}
                   </div>
 
-                  {pastEvents.length > pastVisible && (
+                  {filteredPast.length > pastVisible && (
                     <div className="mt-12 flex justify-center">
                       <button
                         onClick={() => setPastVisible(prev => prev + VISIBLE_INCREMENT)}
                         className="px-8 py-3 bg-white border border-gray-200 text-gray-500 font-bold rounded-2xl shadow-soft hover:shadow-md hover:border-gray-300 hover:bg-gray-50 transition-all active:scale-95 text-sm"
                       >
-                        See more past events ({pastEvents.length - pastVisible} left)
+                        See more past events ({filteredPast.length - pastVisible} left)
                       </button>
                     </div>
                   )}
