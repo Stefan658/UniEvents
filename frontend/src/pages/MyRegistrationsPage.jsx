@@ -237,7 +237,15 @@ const MyRegistrationsPage = () => {
               </h2>
               <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-8' : 'flex flex-col gap-6'}>
                 {waitlistedRegistrations.map((reg) => (
-                  <RegistrationCard key={reg.id} reg={reg} onCancel={handleCancel} actionLoading={actionLoading} variant={viewMode === 'list' ? 'row' : 'card'} isWaitlisted />
+                  <RegistrationCard 
+                    key={reg.id} 
+                    reg={reg} 
+                    onCancel={handleCancel} 
+                    actionLoading={actionLoading} 
+                    variant={viewMode === 'list' ? 'row' : 'card'} 
+                    isWaitlisted 
+                    isNearby={reg.organizer_email?.startsWith('nearby.')}
+                  />
                 ))}
               </div>
             </div>
@@ -254,7 +262,14 @@ const MyRegistrationsPage = () => {
               </h2>
               <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-8' : 'flex flex-col gap-6'}>
                 {activeRegistrations.map((reg) => (
-                  <RegistrationCard key={reg.id} reg={reg} onCancel={handleCancel} actionLoading={actionLoading} variant={viewMode === 'list' ? 'row' : 'card'} />
+                  <RegistrationCard 
+                    key={reg.id} 
+                    reg={reg} 
+                    onCancel={handleCancel} 
+                    actionLoading={actionLoading} 
+                    variant={viewMode === 'list' ? 'row' : 'card'} 
+                    isNearby={reg.organizer_email?.startsWith('nearby.')}
+                  />
                 ))}
               </div>
             </div>
@@ -271,7 +286,13 @@ const MyRegistrationsPage = () => {
               </h2>
               <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-8' : 'flex flex-col gap-6'}>
                 {cancelledRegistrations.map((reg) => (
-                  <RegistrationCard key={reg.id} reg={reg} isCancelled variant={viewMode === 'list' ? 'row' : 'card'} />
+                  <RegistrationCard 
+                    key={reg.id} 
+                    reg={reg} 
+                    isCancelled 
+                    variant={viewMode === 'list' ? 'row' : 'card'} 
+                    isNearby={reg.organizer_email?.startsWith('nearby.')}
+                  />
                 ))}
               </div>
             </div>
@@ -288,7 +309,13 @@ const MyRegistrationsPage = () => {
               </h2>
               <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-8' : 'flex flex-col gap-6'}>
                 {pastRegistrations.map((reg) => (
-                  <RegistrationCard key={reg.id} reg={reg} isPast variant={viewMode === 'list' ? 'row' : 'card'} />
+                  <RegistrationCard 
+                    key={reg.id} 
+                    reg={reg} 
+                    isPast 
+                    variant={viewMode === 'list' ? 'row' : 'card'} 
+                    isNearby={reg.organizer_email?.startsWith('nearby.')}
+                  />
                 ))}
               </div>
             </div>
@@ -299,7 +326,7 @@ const MyRegistrationsPage = () => {
   );
 };
 
-const RegistrationCard = ({ reg, onCancel, actionLoading, isCancelled, isPast, isWaitlisted, variant = 'card' }) => {
+const RegistrationCard = ({ reg, onCancel, actionLoading, isCancelled, isPast, isWaitlisted, isNearby, variant = 'card' }) => {
   const isRow = variant === 'row';
 
   const formatDate = (dateString) => {
@@ -323,7 +350,15 @@ const RegistrationCard = ({ reg, onCancel, actionLoading, isCancelled, isPast, i
   };
 
   return (
-    <SectionCard className={`group transition-all flex flex-col ${isRow ? 'md:flex-row md:items-center' : ''} ${isCancelled ? 'border-red-100 bg-red-50/10' : isWaitlisted ? 'border-amber-100 bg-amber-50/10' : 'hover:border-primary-100'}`}>
+    <SectionCard className={`group transition-all flex flex-col ${isRow ? 'md:flex-row md:items-center' : ''} ${
+      isCancelled 
+        ? 'border-red-100 bg-red-50/10' 
+        : isWaitlisted 
+          ? 'border-amber-100 bg-amber-50/10' 
+          : isNearby
+            ? 'border-indigo-100 bg-indigo-50/30'
+            : 'hover:border-primary-100'
+    }`}>
       <div className={`flex-grow ${isRow ? 'md:flex md:items-center md:gap-8' : ''}`}>
         <div className={`${isRow ? 'md:w-1/4 md:shrink-0' : 'flex justify-between items-start mb-4'}`}>
           <div className="flex flex-wrap gap-2">
@@ -338,6 +373,12 @@ const RegistrationCard = ({ reg, onCancel, actionLoading, isCancelled, isPast, i
             }`}>
               {isCancelled ? 'EVENT CANCELLED' : isWaitlisted ? 'WAITLISTED' : reg.status === 'confirmed' ? 'Confirmed' : reg.status}
             </span>
+            {isNearby && (
+              <span className="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-indigo-100 text-indigo-700 border border-indigo-200/50">
+                <MapPin className="w-3 h-3 mr-1 inline-block -translate-y-px" />
+                Outside Campus
+              </span>
+            )}
             <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
               reg.is_free_entry 
                 ? 'bg-blue-50 text-blue-700 border-blue-100' 

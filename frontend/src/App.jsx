@@ -14,6 +14,7 @@ import EditEventPage from './pages/EditEventPage';
 import SupportPage from './pages/SupportPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import MyRegistrationsPage from './pages/MyRegistrationsPage';
+import UniNearbyPage from './pages/UniNearbyPage';
 import globalBg from './assets/backg.png';
 
 function App() {
@@ -44,6 +45,7 @@ function App() {
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/events/:id" element={<EventDetailsPage />} />
                 <Route path="/support" element={<SupportPage />} />
+                <Route path="/nearby" element={<UniNearbyPage />} />
                 
                 {/* Participant Routes */}
                 <Route 

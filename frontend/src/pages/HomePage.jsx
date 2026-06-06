@@ -11,6 +11,9 @@ import AssistantWidget from '../components/AssistantWidget';
 import heroBg from '../assets/backg-based-from-logo.png';
 import globalBg from '../assets/backg.png';
 
+const INITIAL_VISIBLE_COUNT = 6;
+const VISIBLE_INCREMENT = 6;
+
 const HomePage = () => {
   const { user, isAuthenticated, role } = useAuth();
   const [viewMode, setViewMode] = useState('grid');
@@ -18,6 +21,13 @@ const HomePage = () => {
   const [popularEvents, setPopularEvents] = useState([]);
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [pastEvents, setPastEvents] = useState([]);
+  
+  // Pagination / Visible counts
+  const [upcomingVisible, setUpcomingVisible] = useState(INITIAL_VISIBLE_COUNT);
+  const [recommendedVisible, setRecommendedVisible] = useState(INITIAL_VISIBLE_COUNT);
+  const [popularVisible, setPopularVisible] = useState(INITIAL_VISIBLE_COUNT);
+  const [pastVisible, setPastVisible] = useState(INITIAL_VISIBLE_COUNT);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -207,11 +217,24 @@ const HomePage = () => {
                     <p className="text-gray-400 font-bold text-lg">No upcoming events found. Check back soon!</p>
                   </div>
                 ) : (
-                  <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8' : 'flex flex-col gap-6'}>
-                    {upcomingEvents.map((event) => (
-                      <EventCard key={event.id} event={event} variant={viewMode === 'list' ? 'row' : 'card'} />
-                    ))}
-                  </div>
+                  <>
+                    <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8' : 'flex flex-col gap-6'}>
+                      {upcomingEvents.slice(0, upcomingVisible).map((event) => (
+                        <EventCard key={event.id} event={event} variant={viewMode === 'list' ? 'row' : 'card'} />
+                      ))}
+                    </div>
+                    
+                    {upcomingEvents.length > upcomingVisible && (
+                      <div className="mt-12 flex justify-center">
+                        <button
+                          onClick={() => setUpcomingVisible(prev => prev + VISIBLE_INCREMENT)}
+                          className="px-8 py-3 bg-white border border-gray-200 text-primary-600 font-bold rounded-2xl shadow-soft hover:shadow-md hover:border-primary-100 hover:bg-primary-50 transition-all active:scale-95 text-sm"
+                        >
+                          See more events ({upcomingEvents.length - upcomingVisible} left)
+                        </button>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -226,10 +249,21 @@ const HomePage = () => {
                   </div>
 
                   <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8' : 'flex flex-col gap-6'}>
-                    {recommendedEvents.map((event) => (
+                    {recommendedEvents.slice(0, recommendedVisible).map((event) => (
                       <EventCard key={`rec-${event.id}`} event={event} variant={viewMode === 'list' ? 'row' : 'card'} />
                     ))}
                   </div>
+
+                  {recommendedEvents.length > recommendedVisible && (
+                    <div className="mt-12 flex justify-center">
+                      <button
+                        onClick={() => setRecommendedVisible(prev => prev + VISIBLE_INCREMENT)}
+                        className="px-8 py-3 bg-white border border-gray-200 text-primary-600 font-bold rounded-2xl shadow-soft hover:shadow-md hover:border-primary-100 hover:bg-primary-50 transition-all active:scale-95 text-sm"
+                      >
+                        See more recommendations ({recommendedEvents.length - recommendedVisible} left)
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -244,10 +278,21 @@ const HomePage = () => {
                   </div>
 
                   <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8' : 'flex flex-col gap-6'}>
-                    {popularEvents.map((event) => (
+                    {popularEvents.slice(0, popularVisible).map((event) => (
                       <EventCard key={`popular-${event.id}`} event={event} variant={viewMode === 'list' ? 'row' : 'card'} />
                     ))}
                   </div>
+
+                  {popularEvents.length > popularVisible && (
+                    <div className="mt-12 flex justify-center">
+                      <button
+                        onClick={() => setPopularVisible(prev => prev + VISIBLE_INCREMENT)}
+                        className="px-8 py-3 bg-white border border-gray-200 text-primary-600 font-bold rounded-2xl shadow-soft hover:shadow-md hover:border-primary-100 hover:bg-primary-50 transition-all active:scale-95 text-sm"
+                      >
+                        See more events ({popularEvents.length - popularVisible} left)
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -258,10 +303,21 @@ const HomePage = () => {
                     <div className="h-1 flex-grow mx-8 bg-gray-100 rounded-full hidden md:block opacity-50"></div>
                   </div>
                   <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 opacity-90 grayscale-[50%] hover:grayscale-0 transition-all duration-500' : 'flex flex-col gap-6 opacity-90 grayscale-[50%] hover:grayscale-0 transition-all duration-500'}>
-                    {pastEvents.map((event) => (
+                    {pastEvents.slice(0, pastVisible).map((event) => (
                       <EventCard key={event.id} event={event} variant={viewMode === 'list' ? 'row' : 'card'} />
                     ))}
                   </div>
+
+                  {pastEvents.length > pastVisible && (
+                    <div className="mt-12 flex justify-center">
+                      <button
+                        onClick={() => setPastVisible(prev => prev + VISIBLE_INCREMENT)}
+                        className="px-8 py-3 bg-white border border-gray-200 text-gray-500 font-bold rounded-2xl shadow-soft hover:shadow-md hover:border-gray-300 hover:bg-gray-50 transition-all active:scale-95 text-sm"
+                      >
+                        See more past events ({pastEvents.length - pastVisible} left)
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </>

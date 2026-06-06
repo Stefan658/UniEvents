@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, LayoutDashboard, Shield, Menu, X, Home, Bookmark, ExternalLink, Clock } from 'lucide-react';
+import { LogOut, LayoutDashboard, Shield, Menu, X, Home, Bookmark, ExternalLink, Clock, MapPin } from 'lucide-react';
 import Button from './Button';
 import { logoutUser } from '../api/auth';
 import logo from '../assets/unievents-logo-small-no_bg.png';
@@ -23,6 +23,7 @@ const Navbar = () => {
 
   const navLinks = [
     { name: 'Browse Events', path: '/', icon: Home },
+    { name: 'Uni Nearby', path: '/nearby', icon: MapPin },
     ...(isAuthenticated && role === 'student' ? [{ name: 'My Registrations', path: '/my-registrations', icon: Bookmark }] : []),
     ...(isAuthenticated && role === 'organizer' ? [{ name: 'Dashboard', path: '/organizer', icon: LayoutDashboard }] : []),
     ...(isAuthenticated && role === 'admin' ? [{ name: 'Admin Panel', path: '/admin', icon: Shield }] : []),

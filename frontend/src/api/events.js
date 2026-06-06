@@ -36,6 +36,15 @@ export const getRecommendedEvents = async () => {
   }
 };
 
+export const getNearbyEvents = async () => {
+  try {
+    const response = await axiosClient.get('/events/nearby');
+    return response.data?.data || response.data;
+  } catch (error) {
+    throw error.response?.data?.error || 'Failed to fetch nearby events';
+  }
+};
+
 export const createEvent = async (eventData) => {
   try {
     const response = await axiosClient.post('/events', eventData);

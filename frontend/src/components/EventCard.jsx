@@ -1,9 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Tag, User, ArrowRight } from 'lucide-react';
+import { Calendar, Tag, User, ArrowRight, MapPin } from 'lucide-react';
 import Button from './Button';
 
-const EventCard = ({ event, variant = 'card' }) => {
+const EventCard = ({ event, variant = 'card', isNearby = false }) => {
   if (!event) return null;
   const { 
     id, 
@@ -68,6 +68,12 @@ const EventCard = ({ event, variant = 'card' }) => {
     <div className={`p-6 flex-grow ${isRow ? 'flex flex-col md:flex-row md:items-center md:gap-8' : 'flex flex-col'}`}>
       <div className={`${isRow ? 'md:w-1/4' : 'mb-5'} flex flex-col gap-2`}>
         <div className="flex flex-wrap gap-2">
+          {isNearby && (
+            <span className="inline-flex items-center px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider bg-indigo-100 text-indigo-700 border border-indigo-200/50">
+              <MapPin className="w-3 h-3 mr-1.5" />
+              Outside Campus
+            </span>
+          )}
           {event.confirmed_registrations_count !== undefined && (
             <span className="inline-flex items-center px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider bg-orange-50 text-orange-700 border border-orange-100/50 animate-pulse">
               🔥 {event.confirmed_registrations_count} confirmed
@@ -129,7 +135,9 @@ const EventCard = ({ event, variant = 'card' }) => {
 
   return (
     <Link to={`/events/${id}`} className="block group h-full">
-      <div className={`bg-white rounded-3xl shadow-soft border border-gray-100/50 overflow-hidden hover:shadow-soft-lg hover:-translate-y-1 transition-all duration-300 h-full flex flex-col`}>
+      <div className={`rounded-3xl shadow-soft border border-gray-100/50 overflow-hidden hover:shadow-soft-lg hover:-translate-y-1 transition-all duration-300 h-full flex flex-col ${
+        isNearby ? 'bg-indigo-50/40 border-indigo-100/50' : 'bg-white'
+      }`}>
         {content}
         {!isRow && (
           <div className="px-6 pb-6">
