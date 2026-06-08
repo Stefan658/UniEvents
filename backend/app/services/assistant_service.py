@@ -1,6 +1,7 @@
 import re
 import csv
 import os
+import calendar
 from pathlib import Path
 from datetime import datetime, timedelta
 from sqlalchemy import or_, and_
@@ -62,14 +63,16 @@ def remove_diacritics(text):
 
 def detect_language(text):
     """Simple heuristic to detect if the query is in Romanian."""
+    # text is already normalized in handle_assistant_message calling it
     ro_keywords = [
-        'ce', 'care', 'sunt', 'evenimente', 'recomanzi', 'saptamana', 'locuri', 
+        'ce', 'care', 'cat', 'sunt', 'evenimente', 'recomanzi', 'saptamana', 'locuri', 
         'pline', 'cariera', 'lista', 'asteptare', 'este', 'exista', 'am', 'mele', 
         'inscrierile', 'inscriere', 'badge', 'badge-uri', 'recompense', 'obtin',
         'arata', 'aratami', 'arata-mi', 'imi', 'cele', 'vreau', 'top', 'sportive',
         'voluntariat', 'cultural', 'stiintific', 'conferinta', 'cum', 'e', 'viata',
         'student', 'in', 'suceava', 'unde', 'pot', 'manca', 'mancare', 'fac',
-        'construiesc', 'de', 'la'
+        'construiesc', 'de', 'la', 'salut', 'buna', 'multumesc', 'mersi', 'data',
+        'azi', 'astazi', 'poti', 'facultati'
     ]
     words = set(re.findall(r'\b\w+\b', text))
     if any(word in ro_keywords for word in words):
@@ -90,8 +93,150 @@ def _serialize_assistant_event(event):
         "category_name": event.category.name if getattr(event, 'category', None) else None,
         "start_at": event.start_at.isoformat() if event.start_at else None,
         "location": event.location,
-        "participation_type": event.participation_type
+        "participation_type": event.participation_type,
+        "organizer_full_name": event.organizer.full_name if getattr(event, 'organizer', None) else None,
+        "is_free_entry": event.is_free_entry,
+        "ticket_price": float(event.ticket_price) if event.ticket_price is not None else None,
+        "requires_registration": event.requires_registration
     }
+
+def detect_filter_criteria(message):
+    """
+    Detects filter criteria from a normalized message.
+    """
+    criteria = {
+        "entry_type": None,
+        "participation_type": None,
+        "category": None,
+        "location_query": None,
+        "organizer_query": None,
+        "requires_registration": None,
+        "date_range": None
+    }
+    
+    def match(kws):
+        return any(re.search(rf'\b{re.escape(kw)}\b', message) for kw in kws)
+
+    # Entry type
+    if match(['free', 'gratis', 'gratuit', 'gratuite', 'fara plata', 'fara bilet', 'no cost', 'libera', 'liberă']):
+        criteria["entry_type"] = "free"
+    elif match(['paid', 'platit', 'plătit', 'ticket', 'bilet', 'pret', 'preț', 'cost']):
+        criteria["entry_type"] = "paid"
+
+    # Participation type
+    if match(['online', 'virtual', 'remote', 'distanta', 'distanță']):
+        criteria["participation_type"] = "online"
+    elif match(['hybrid', 'hibrid']):
+        criteria["participation_type"] = "hybrid"
+    elif match(['on-site', 'onsite', 'fizic', 'persoana', 'fata locului', 'fața locului']):
+        criteria["participation_type"] = "on-site"
+
+    # Requires registration
+    if any(kw in message for kw in ['necesita inscriere', 'necesită înscriere', 'registration required', 'cu inscriere', 'cu înscriere', 'requires registration']):
+        criteria["requires_registration"] = True
+    elif any(kw in message for kw in ['fara inscriere', 'fără înscriere', 'no registration', 'nu necesita inscriere', 'nu necesită înscriere']):
+        criteria["requires_registration"] = False
+
+    # Date Range
+    if match(['azi', 'astazi', 'astăzi', 'today']):
+        criteria["date_range"] = "today"
+    elif match(['maine', 'mâine', 'tomorrow']):
+        criteria["date_range"] = "tomorrow"
+    elif match(['saptamana asta', 'săptămâna asta', 'this week']):
+        criteria["date_range"] = "this_week"
+    elif match(['luna asta', 'this month']):
+        criteria["date_range"] = "this_month"
+
+    # Category
+    cat_map = {
+        "Workshop": ['workshop', 'atelier'],
+        "Career": ['career', 'cariera', 'carieră', 'job', 'internship', 'cv', 'alumni'],
+        "Sport": ['sport', 'fotbal', 'football', 'baschet', 'basketball'],
+        "Volunteering": ['voluntariat', 'volunteer', 'volunteering', 'caritate'],
+        "Academic": ['academic', 'research', 'cercetare', 'seminar'],
+        "Social": ['social'],
+        "Cultural": ['cultural', 'teatru', 'film', 'muzica', 'music', 'art'],
+        "Conference": ['conference', 'conferinta', 'conferință', 'summit', 'simpozion']
+    }
+    for cat, kws in cat_map.items():
+        if match(kws):
+            criteria["category"] = cat
+            break
+
+    # Location query
+    loc_match = re.search(r'\b(?:la|in|în|at)\s+([a-zA-Z0-9\s]+)', message)
+    if loc_match:
+        loc = loc_match.group(1).strip()
+        loc = re.sub(r'[?.!,]', '', loc).strip()
+        loc = loc.split(' care ')[0].split(' that ')[0].split(' organizeaza ')[0].split(' organized ')[0]
+        if len(loc) > 2:
+            criteria["location_query"] = loc
+
+    # Organizer query
+    org_match = re.search(r'\b(?:organizeaza|organizează|organizat de|organizate de|organized by|events by|from|by|de la)\s+([a-zA-Z0-9\s]+)', message)
+    if org_match:
+        org = org_match.group(1).strip()
+        org = re.sub(r'[?.!,]', '', org).strip()
+        # Remove generic words that might be captured
+        generic_words = ['sunt', 'available', 'disponibile', 'viitoare', 'upcoming', 'mele', 'my']
+        for gw in generic_words:
+            org = re.sub(rf'\b{gw}\b', '', org).strip()
+            
+        org = org.split(' care ')[0].split(' that ')[0].split(' at ')[0].split(' in ')[0].split(' la ')[0].split(' în ')[0]
+        if len(org) > 2:
+            criteria["organizer_query"] = org
+
+    return criteria
+
+def apply_assistant_event_filters(query, criteria):
+    """
+    Applies criteria filters to an event query.
+    """
+    if criteria["category"]:
+        query = query.join(Category, Event.category_id == Category.id).filter(Category.name == criteria["category"])
+    
+    if criteria["entry_type"] == "free":
+        query = query.filter(Event.is_free_entry == True)
+    elif criteria["entry_type"] == "paid":
+        query = query.filter(Event.is_free_entry == False)
+
+    if criteria["participation_type"]:
+        query = query.filter(Event.participation_type == criteria["participation_type"])
+
+    if criteria["requires_registration"] is not None:
+        query = query.filter(Event.requires_registration == criteria["requires_registration"])
+
+    if criteria["location_query"]:
+        query = query.filter(Event.location.ilike(f"%{criteria['location_query']}%"))
+
+    if criteria["organizer_query"]:
+        # User is already joined as organizer in get_discovery_query
+        query = query.filter(or_(
+            User.first_name.ilike(f"%{criteria['organizer_query']}%"),
+            User.last_name.ilike(f"%{criteria['organizer_query']}%"),
+            User.email.ilike(f"%{criteria['organizer_query']}%")
+        ))
+
+    if criteria["date_range"]:
+        local_now = datetime.now()
+        today_start = datetime(local_now.year, local_now.month, local_now.day)
+        
+        if criteria["date_range"] == "today":
+            tomorrow_start = today_start + timedelta(days=1)
+            query = query.filter(Event.start_at >= today_start, Event.start_at < tomorrow_start)
+        elif criteria["date_range"] == "tomorrow":
+            tomorrow_start = today_start + timedelta(days=1)
+            day_after = tomorrow_start + timedelta(days=1)
+            query = query.filter(Event.start_at >= tomorrow_start, Event.start_at < day_after)
+        elif criteria["date_range"] == "this_week":
+            week_end = today_start + timedelta(days=7)
+            query = query.filter(Event.start_at >= today_start, Event.start_at <= week_end)
+        elif criteria["date_range"] == "this_month":
+            last_day = calendar.monthrange(local_now.year, local_now.month)[1]
+            month_end = datetime(local_now.year, local_now.month, last_day, 23, 59, 59)
+            query = query.filter(Event.start_at >= today_start, Event.start_at <= month_end)
+
+    return query
 
 def handle_assistant_message(message, current_user=None):
     """
@@ -197,19 +342,25 @@ def handle_assistant_message(message, current_user=None):
         return None
 
     # Base query for upcoming published events
-    # We exclude test/validation events from general discovery
+    # We exclude test/validation events and Uni Nearby events from general discovery
     test_event_patterns = ['%waitlist validation%', '%validation demo%', '%demo event%', '%test%']
     
     def get_discovery_query():
-        query = Event.query.options(joinedload(Event.category)).filter(
+        query = Event.query.options(joinedload(Event.category), joinedload(Event.organizer)).join(User, Event.organizer_id == User.id).filter(
             Event.status == 'published',
             Event.start_at > now
         )
+        # Exclude nearby events
+        query = query.filter(User.email.notilike('nearby.%'))
+        
         for pattern in test_event_patterns:
             query = query.filter(Event.title.notilike(pattern))
         return query
 
     is_student = current_user and current_user.role and current_user.role.name == 'student'
+
+    # Helper for personalized ownership markers
+    is_personal_query = has_keyword(['my', 'mine', 'registered', 'confirmed', 'attending', 'mele', 'la care sunt inscris', 'la care sunt înscris', 'inscrierile mele', 'înscrierile mele'])
 
     # PERSONALIZED RULE 1: Recommendations
     if has_keyword(['recommend', 'recommendation', 'suggest', 'for me', 'recomanzi', 'recomandari', 'recomandări', 'pentru mine']):
@@ -227,7 +378,7 @@ def handle_assistant_message(message, current_user=None):
         return {"answer": answer, "suggestions": suggestions, "events": events}
 
     # PERSONALIZED RULE 2: My events this week
-    if has_keyword(['my events', 'my registrations', 'this week', 'have i', 'evenimentele mele', 'saptamana asta', 'săptămâna asta', 'ce evenimente am', 'inscrierile mele', 'înscrierile mele']):
+    if is_personal_query and has_keyword(['events', 'registrations', 'this week', 'have i', 'evenimentele', 'saptamana asta', 'săptămâna asta', 'ce evenimente am', 'inscrierile', 'înscrierile']):
         if not is_student:
             return {"answer": login_req_msg, "suggestions": suggestions, "events": []}
 
@@ -317,7 +468,6 @@ def handle_assistant_message(message, current_user=None):
         return {"answer": answer, "suggestions": suggestions, "events": []}
 
     # RULE CV GUIDANCE: Intent override for KB guidance about CV/Portfolio
-    # RULE CV GUIDANCE: Intent override for KB guidance about CV/Portfolio
     cv_guidance_keywords = [
         'cum imi construiesc cv', 'cum imi fac cv', 'construiesc cv', 'fac cv', 'cv-ul', 'cv ul',
         'how do i build my cv', 'how can i build my cv', 'build my resume', 'improve my resume',
@@ -328,8 +478,51 @@ def handle_assistant_message(message, current_user=None):
         if kb_answer:
             return {"answer": kb_answer, "suggestions": suggestions, "events": []}
 
-    # RULE A: Popular / Trending Events
+    # CONVERSATIONAL RULE: Date / Time (High Priority Utility)
+    # Triggers only if NO event discovery words are present
+    date_time_phrases = [
+        'ce data este azi', 'ce data e azi', 'ce data avem', 'ce zi este azi', 'ce zi e azi',
+        'cat e ceasul', 'cat este ceasul', 'ce ora este', 'ce ora e',
+        'what date is today', 'what day is today', 'what time is it', 'current time', 'today\'s date'
+    ]
+    has_event_words = has_keyword(['eveniment', 'event', 'workshop', 'conferinta', 'conference'])
+    if any(phrase in clean_message for phrase in date_time_phrases) and not has_event_words:
+        now_local = datetime.now()
+        date_str = now_local.strftime("%Y-%m-%d")
+        time_str = now_local.strftime("%H:%M")
+        if lang == 'ro':
+            answer = f"Azi este {date_str}, iar ora curentă este {time_str}."
+        else:
+            answer = f"Today is {date_str}, and the current time is {time_str}."
+        return {"answer": answer, "suggestions": suggestions, "events": []}
 
+    # NEW RULE: Filter-based Event Discovery
+    criteria = detect_filter_criteria(clean_message)
+    has_criteria = any(val is not None for val in criteria.values())
+    is_discovery = any(kw in clean_message for kw in [
+        'eveniment', 'event', 'arata', 'show', 'give', 'da-mi', 'dami', 'ce ', 'what ', 'care ', 'listeaza', 'list'
+    ])
+    
+    if has_criteria and (is_discovery or criteria['category'] or criteria['organizer_query'] or criteria['location_query']):
+        query = get_discovery_query()
+        query = apply_assistant_event_filters(query, criteria)
+        results = query.order_by(Event.start_at.asc()).limit(5).all()
+        events = [_serialize_assistant_event(e) for e in results]
+        
+        if events:
+            answer = f"Am găsit {len(events)} evenimente care corespund criteriilor tale:" if lang == 'ro' else f"I found {len(events)} events matching your criteria:"
+        else:
+            # Special clearer empty message for date-based discovery
+            if criteria['date_range'] == 'today':
+                answer = "Nu am găsit evenimente programate pentru azi." if lang == 'ro' else "I couldn't find any events scheduled for today."
+            elif criteria['date_range'] == 'tomorrow':
+                answer = "Nu am găsit evenimente programate pentru mâine." if lang == 'ro' else "I couldn't find any events scheduled for tomorrow."
+            else:
+                answer = "Nu am găsit evenimente care să corespundă acestor criterii." if lang == 'ro' else "I couldn't find any events matching those criteria."
+        
+        return {"answer": answer, "suggestions": suggestions, "events": events}
+
+    # RULE A: Popular / Trending Events
     if has_keyword(['popular', 'populare', 'top', 'asteptate', 'most awaited', 'trending']):
         popular_results = event_service.get_popular_upcoming_events(limit=10)
         # Exclude test events from popular results
@@ -343,13 +536,6 @@ def handle_assistant_message(message, current_user=None):
         return {"answer": answer, "suggestions": suggestions, "events": events}
 
     # RULE B: IT / Workshop / Tech
-    tech_keywords = [
-        'it', 'tech', 'tehnologie', 'tehnologii', 'workshop', 'workshops', 'atelier', 'coding', 
-        'software', 'ai', 'inteligenta', 'development', 'developer', 'programming', 'programare', 
-        'web', 'cloud', 'cybersecurity', 'securitate', 'react', 'python', 'flask', 'mobile', 
-        'flutter', 'robotics', 'robotica', 'embedded', 'iot', 'infrastructure'
-    ]
-    if has_keyword(tech_keywords):
         # We use explicit word boundaries for short terms like 'it', 'ai' via has_keyword logic
         # For the query, we use explicit matches to ensure relevance
         tech_terms = [
@@ -545,6 +731,44 @@ def handle_assistant_message(message, current_user=None):
         answer_ro = "Dacă un eveniment necesită înregistrare și este plin, vei avea opțiunea să apeși pe 'Join Waitlist' (Alătură-te listei de așteptare) pe pagina evenimentului. Te vom notifica dacă se eliberează un loc!"
         answer_en = "If an event requires registration and is full, you will see a 'Join Waitlist' option on the event page. We will notify you if a spot becomes available!"
         answer = answer_ro if lang == 'ro' else answer_en
+        return {"answer": answer, "suggestions": suggestions, "events": []}
+
+    # CONVERSATIONAL RULE: Greetings
+    if has_keyword(['salut', 'buna', 'buna ziua', 'seara buna', 'hi', 'hello', 'hey']):
+        # Only trigger if it's a simple greeting or doesn't have other criteria
+        if not has_criteria and not is_discovery:
+            answer = "Salut! Te pot ajuta să descoperi evenimente, să găsești recomandări, să verifici evenimente gratuite/online sau să afli informații despre USV." if lang == 'ro' else "Hi! I can help you discover events, find recommendations, check free/online events, or answer questions about USV."
+            return {"answer": answer, "suggestions": suggestions, "events": []}
+
+    # CONVERSATIONAL RULE: Thanks
+    if has_keyword(['multumesc', 'mersi', 'ms', 'merci', 'thanks', 'thank you', 'thx']):
+        if not is_discovery:
+            answer = "Cu drag! Dacă mai ai nevoie, îți pot recomanda evenimente, filtra după categorie sau explica funcționalitățile UniEvents." if lang == 'ro' else "You're welcome! I can also help you find events, filter by category, or explain UniEvents features."
+            return {"answer": answer, "suggestions": suggestions, "events": []}
+
+    # CONVERSATIONAL RULE: Date / Time
+    date_time_phrases = [
+        'ce data este azi', 'ce data e azi', 'ce data avem', 'ce zi este azi', 'ce zi e azi',
+        'cat e ceasul', 'cat este ceasul', 'ce ora este', 'ce ora e',
+        'what date is today', 'what day is today', 'what time is it', 'current time', 'today\'s date'
+    ]
+    if any(phrase in clean_message for phrase in date_time_phrases):
+        now_local = datetime.now()
+        date_str = now_local.strftime("%Y-%m-%d")
+        time_str = now_local.strftime("%H:%M")
+        if lang == 'ro':
+            answer = f"Azi este {date_str}, iar ora serverului este {time_str}."
+        else:
+            answer = f"Today is {date_str}, and the server time is {time_str}."
+        return {"answer": answer, "suggestions": suggestions, "events": []}
+
+    # CONVERSATIONAL RULE: Help / Capabilities
+    help_phrases = [
+        'ce poti face', 'ce pot face', 'ma poti ajuta', 'ma pot ajuta', 'ajutor',
+        'what can you do', 'how can you help', 'help'
+    ]
+    if any(phrase in clean_message for phrase in help_phrases):
+        answer = "Pot să te ajut să descoperi evenimente USV, să caut evenimente gratuite, online, hibrid, după organizator, locație sau categorie, să verific recomandări, badge-uri și lista de așteptare." if lang == 'ro' else "I can help you discover USV events, search for free, online or hybrid events, filter by organizer, location or category, and check recommendations, badges or waitlist status."
         return {"answer": answer, "suggestions": suggestions, "events": []}
 
     # RULE KNOWLEDGE BASE: General information about USV and Suceava

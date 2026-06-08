@@ -7,7 +7,7 @@ import ErrorMessage from '../components/ErrorMessage';
 import { getAllEvents, getPopularEvents, getRecommendedEvents } from '../api/events';
 import { getMyRegistrations } from '../api/registrations';
 import { useAuth } from '../contexts/AuthContext';
-import { Sparkles, Calendar, TrendingUp, LayoutGrid, List, X, Search } from 'lucide-react';
+import { Sparkles, Calendar, TrendingUp, LayoutGrid, List, X, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import AssistantWidget from '../components/AssistantWidget';
 import heroBg from '../assets/backg-based-from-logo.png';
 import globalBg from '../assets/backg.png';
@@ -21,6 +21,16 @@ const HomePage = () => {
   const searchQuery = searchParams.get('q') || '';
 
   const [viewMode, setViewMode] = useState('grid');
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    category: '',
+    organizer: '',
+    location: '',
+    participationType: '',
+    dateRange: '',
+    entryType: '',
+    requiresRegistration: ''
+  });
   const [recommendedEvents, setRecommendedEvents] = useState([]);
   const [popularEvents, setPopularEvents] = useState([]);
   const [upcomingEvents, setUpcomingEvents] = useState([]);
@@ -35,13 +45,20 @@ const HomePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Reset visible counts when search changes
+  // Derived filter options
+  const categories = useMemo(() => [...new Set(upcomingEvents.map(e => e.category_name))].filter(Boolean).sort(), [upcomingEvents]);
+  const organizers = useMemo(() => [...new Set(upcomingEvents.map(e => e.organizer_full_name || e.organizer_email))].filter(Boolean).sort(), [upcomingEvents]);
+  const locations = useMemo(() => [...new Set(upcomingEvents.map(e => e.location))].filter(Boolean).sort(), [upcomingEvents]);
+  const hasActiveFilters = useMemo(() => Object.values(filters).some(val => val !== '' && val !== 'all'), [filters]);
+  const activeFiltersCount = useMemo(() => Object.values(filters).filter(val => val !== '' && val !== 'all').length, [filters]);
+
+  // Reset visible counts when search or filters change
   useEffect(() => {
     setUpcomingVisible(INITIAL_VISIBLE_COUNT);
     setRecommendedVisible(INITIAL_VISIBLE_COUNT);
     setPopularVisible(INITIAL_VISIBLE_COUNT);
     setPastVisible(INITIAL_VISIBLE_COUNT);
-  }, [searchQuery]);
+  }, [searchQuery, filters]);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -118,22 +135,87 @@ const HomePage = () => {
   }, [isAuthenticated, role]);
 
   const filterEvents = (eventsList) => {
-    if (!searchQuery) return eventsList;
-    const q = searchQuery.toLowerCase();
-    return eventsList.filter(e => 
-      e.title?.toLowerCase().includes(q) ||
-      e.description?.toLowerCase().includes(q) ||
-      e.category_name?.toLowerCase().includes(q) ||
-      e.location?.toLowerCase().includes(q) ||
-      e.organizer_full_name?.toLowerCase().includes(q) ||
-      e.participation_type?.toLowerCase().includes(q)
-    );
+    let filtered = eventsList;
+
+    // Search query filter
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(e => 
+        e.title?.toLowerCase().includes(q) ||
+        e.description?.toLowerCase().includes(q) ||
+        e.category_name?.toLowerCase().includes(q) ||
+        e.location?.toLowerCase().includes(q) ||
+        e.organizer_full_name?.toLowerCase().includes(q) ||
+        e.organizer_email?.toLowerCase().includes(q) ||
+        e.participation_type?.toLowerCase().includes(q)
+      );
+    }
+
+    // Category filter
+    if (filters.category && filters.category !== 'all') {
+      filtered = filtered.filter(e => e.category_name === filters.category);
+    }
+
+    // Organizer filter
+    if (filters.organizer && filters.organizer !== 'all') {
+      filtered = filtered.filter(e => e.organizer_full_name === filters.organizer || e.organizer_email === filters.organizer);
+    }
+
+    // Location filter
+    if (filters.location && filters.location !== 'all') {
+      filtered = filtered.filter(e => e.location === filters.location);
+    }
+
+    // Participation type filter
+    if (filters.participationType && filters.participationType !== 'all') {
+      filtered = filtered.filter(e => e.participation_type === filters.participationType);
+    }
+
+    // Entry type filter
+    if (filters.entryType === 'free') {
+      filtered = filtered.filter(e => e.is_free_entry);
+    } else if (filters.entryType === 'paid') {
+      filtered = filtered.filter(e => !e.is_free_entry);
+    }
+
+    // Requires registration filter
+    if (filters.requiresRegistration === 'yes') {
+      filtered = filtered.filter(e => e.requires_registration);
+    } else if (filters.requiresRegistration === 'no') {
+      filtered = filtered.filter(e => !e.requires_registration);
+    }
+
+    // Date range filter
+    if (filters.dateRange && filters.dateRange !== 'all') {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      
+      filtered = filtered.filter(e => {
+        const eventDate = new Date(e.start_at);
+        if (filters.dateRange === 'today') {
+          return eventDate.toDateString() === now.toDateString();
+        }
+        if (filters.dateRange === 'this_week') {
+          const nextWeek = new Date(today);
+          nextWeek.setDate(today.getDate() + 7);
+          return eventDate >= today && eventDate < nextWeek;
+        }
+        if (filters.dateRange === 'this_month') {
+          return eventDate.getMonth() === now.getMonth() && 
+                 eventDate.getFullYear() === now.getFullYear() &&
+                 eventDate >= today;
+        }
+        return true;
+      });
+    }
+
+    return filtered;
   };
 
-  const filteredUpcoming = useMemo(() => filterEvents(upcomingEvents), [upcomingEvents, searchQuery]);
-  const filteredPopular = useMemo(() => filterEvents(popularEvents), [popularEvents, searchQuery]);
-  const filteredPast = useMemo(() => filterEvents(pastEvents), [pastEvents, searchQuery]);
-  const filteredRecommended = useMemo(() => filterEvents(recommendedEvents), [recommendedEvents, searchQuery]);
+  const filteredUpcoming = useMemo(() => filterEvents(upcomingEvents), [upcomingEvents, searchQuery, filters]);
+  const filteredPopular = useMemo(() => filterEvents(popularEvents), [popularEvents, searchQuery, filters]);
+  const filteredPast = useMemo(() => filterEvents(pastEvents), [pastEvents, searchQuery, filters]);
+  const filteredRecommended = useMemo(() => filterEvents(recommendedEvents), [recommendedEvents, searchQuery, filters]);
 
   return (
     <div className="relative">
@@ -208,10 +290,203 @@ const HomePage = () => {
                     </Link>
                   </div>
                   {(filteredUpcoming.length === 0 && filteredPast.length === 0 && filteredPopular.length === 0) && (
-                    <p className="mt-8 text-gray-400 font-medium italic">No matches found across any category.</p>
+                    <p className="mt-8 text-gray-400 font-medium italic">No matches found for your search or filters.</p>
                   )}
                 </div>
               )}
+
+              {/* Filter Section */}
+              <div className="w-full max-w-6xl bg-white/60 backdrop-blur-md p-4 md:p-6 rounded-[2.5rem] border border-white/40 shadow-xl shadow-primary-900/5 transition-all duration-300">
+                <div 
+                  className="flex flex-wrap items-center justify-between gap-4 px-2 cursor-pointer group"
+                  onClick={() => setFiltersOpen(!filtersOpen)}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-primary-100 rounded-xl text-primary-600 group-hover:scale-110 transition-transform">
+                      <Calendar className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                        Filter By
+                        {activeFiltersCount > 0 && (
+                          <span className="flex items-center justify-center bg-primary-600 text-white text-[10px] font-black w-5 h-5 rounded-full shadow-sm animate-in zoom-in duration-300">
+                            {activeFiltersCount}
+                          </span>
+                        )}
+                      </h3>
+                      {!filtersOpen && hasActiveFilters && (
+                        <p className="text-xs text-gray-500 font-medium mt-0.5 animate-in fade-in slide-in-from-left-2">
+                          Filters active. Click to adjust.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3 ml-auto">
+                    {hasActiveFilters && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFilters({
+                            category: '',
+                            organizer: '',
+                            location: '',
+                            participationType: '',
+                            dateRange: '',
+                            entryType: '',
+                            requiresRegistration: ''
+                          });
+                        }}
+                        className="text-xs font-bold text-primary-600 hover:text-primary-800 flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:bg-primary-50 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                        Clear filters
+                      </button>
+                    )}
+                    <div className={`p-1.5 rounded-lg bg-gray-50 text-gray-400 group-hover:bg-primary-50 group-hover:text-primary-500 transition-all ${filtersOpen ? 'rotate-180' : ''}`}>
+                      <ChevronDown className="w-5 h-5" />
+                    </div>
+                  </div>
+                </div>
+
+                {filtersOpen && (
+                  <div className="mt-8 pt-8 border-t border-gray-100/50 animate-in fade-in slide-in-from-top-4 duration-300">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                      {/* Category Filter */}
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Category</label>
+                        <select
+                          value={filters.category}
+                          onChange={(e) => setFilters(prev => ({ ...prev, category: e.target.value }))}
+                          className="w-full bg-white border border-gray-100 rounded-2xl px-4 py-3 text-sm font-semibold text-gray-700 focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all cursor-pointer outline-none appearance-none hover:border-primary-200 shadow-sm"
+                        >
+                          <option value="">All Categories</option>
+                          {categories.map(cat => (
+                            <option key={cat} value={cat}>{cat}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Organizer Filter */}
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Organizer</label>
+                        <select
+                          value={filters.organizer}
+                          onChange={(e) => setFilters(prev => ({ ...prev, organizer: e.target.value }))}
+                          className="w-full bg-white border border-gray-100 rounded-2xl px-4 py-3 text-sm font-semibold text-gray-700 focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all cursor-pointer outline-none appearance-none hover:border-primary-200 shadow-sm"
+                        >
+                          <option value="">All Organizers</option>
+                          {organizers.map(org => (
+                            <option key={org} value={org}>{org}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Location Filter */}
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Location</label>
+                        <select
+                          value={filters.location}
+                          onChange={(e) => setFilters(prev => ({ ...prev, location: e.target.value }))}
+                          className="w-full bg-white border border-gray-100 rounded-2xl px-4 py-3 text-sm font-semibold text-gray-700 focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all cursor-pointer outline-none appearance-none hover:border-primary-200 shadow-sm"
+                        >
+                          <option value="">All Locations</option>
+                          {locations.map(loc => (
+                            <option key={loc} value={loc}>{loc}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Participation Type */}
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Type</label>
+                        <select
+                          value={filters.participationType}
+                          onChange={(e) => setFilters(prev => ({ ...prev, participationType: e.target.value }))}
+                          className="w-full bg-white border border-gray-100 rounded-2xl px-4 py-3 text-sm font-semibold text-gray-700 focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all cursor-pointer outline-none appearance-none hover:border-primary-200 shadow-sm"
+                        >
+                          <option value="">All Types</option>
+                          <option value="on-site">On-site</option>
+                          <option value="online">Online</option>
+                          <option value="hybrid">Hybrid</option>
+                        </select>
+                      </div>
+
+                      {/* Date Filter */}
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Date</label>
+                        <select
+                          value={filters.dateRange}
+                          onChange={(e) => setFilters(prev => ({ ...prev, dateRange: e.target.value }))}
+                          className="w-full bg-white border border-gray-100 rounded-2xl px-4 py-3 text-sm font-semibold text-gray-700 focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all cursor-pointer outline-none appearance-none hover:border-primary-200 shadow-sm"
+                        >
+                          <option value="">All Time</option>
+                          <option value="today">Today</option>
+                          <option value="this_week">This Week</option>
+                          <option value="this_month">This Month</option>
+                        </select>
+                      </div>
+
+                      {/* Entry Type */}
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Entry</label>
+                        <select
+                          value={filters.entryType}
+                          onChange={(e) => setFilters(prev => ({ ...prev, entryType: e.target.value }))}
+                          className="w-full bg-white border border-gray-100 rounded-2xl px-4 py-3 text-sm font-semibold text-gray-700 focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all cursor-pointer outline-none appearance-none hover:border-primary-200 shadow-sm"
+                        >
+                          <option value="">All</option>
+                          <option value="free">Free Entry</option>
+                          <option value="paid">Paid Ticket</option>
+                        </select>
+                      </div>
+
+                      {/* Registration Filter */}
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Registration</label>
+                        <select
+                          value={filters.requiresRegistration}
+                          onChange={(e) => setFilters(prev => ({ ...prev, requiresRegistration: e.target.value }))}
+                          className="w-full bg-white border border-gray-100 rounded-2xl px-4 py-3 text-sm font-semibold text-gray-700 focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all cursor-pointer outline-none appearance-none hover:border-primary-200 shadow-sm"
+                        >
+                          <option value="">All</option>
+                          <option value="yes">Requires Registration</option>
+                          <option value="no">No Registration Needed</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Active Filter Chips - Always visible if filters active */}
+                {hasActiveFilters && (
+                  <div className={`mt-4 flex flex-wrap gap-2 ${filtersOpen ? 'pt-6 border-t border-gray-100' : ''} animate-in fade-in slide-in-from-bottom-2`}>
+                    {Object.entries(filters).map(([key, value]) => {
+                      if (!value || value === 'all') return null;
+                      let label = value;
+                      if (key === 'entryType') label = value === 'free' ? 'Free Entry' : 'Paid Ticket';
+                      if (key === 'requiresRegistration') label = value === 'yes' ? 'Registration Required' : 'No Registration';
+                      if (key === 'dateRange') label = value.replace('_', ' ');
+                      
+                      return (
+                        <span key={key} className="inline-flex items-center px-3 py-1.5 rounded-xl bg-primary-50 text-primary-700 text-[10px] font-black uppercase tracking-wider border border-primary-100/50 shadow-sm hover:bg-primary-100 transition-colors">
+                          <span className="opacity-40 mr-1.5">{key}:</span>
+                          {label}
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setFilters(prev => ({ ...prev, [key]: '' }));
+                            }}
+                            className="ml-2 hover:text-primary-900 transition-colors p-0.5 rounded-full hover:bg-primary-200/50"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
 
               <div className="bg-white/50 backdrop-blur-sm p-1.5 rounded-2xl border border-gray-100 shadow-soft flex gap-1">
                 <button
@@ -256,7 +531,7 @@ const HomePage = () => {
                   <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Upcoming Events</h2>
                   <div className="h-1 flex-grow mx-8 bg-gray-100 rounded-full hidden md:block opacity-50"></div>
                   <span className="text-sm font-semibold text-primary-600 bg-primary-50 px-4 py-1.5 rounded-xl border border-primary-100">
-                    {filteredUpcoming.length} {searchQuery ? 'Matches' : 'Upcoming'}
+                    {filteredUpcoming.length} {(searchQuery || hasActiveFilters) ? 'Matches' : 'Upcoming'}
                   </span>
                 </div>
 
@@ -266,7 +541,7 @@ const HomePage = () => {
                       {searchQuery ? <Search className="w-8 h-8 text-gray-300" /> : <Calendar className="w-8 h-8 text-gray-300" />}
                     </div>
                     <p className="text-gray-400 font-bold text-lg">
-                      {searchQuery ? `No events matching "${searchQuery}" found.` : 'No upcoming events found. Check back soon!'}
+                      {(searchQuery || hasActiveFilters) ? `No upcoming events matching your criteria found.` : 'No upcoming events found. Check back soon!'}
                     </p>
                   </div>
                 ) : (
@@ -291,7 +566,7 @@ const HomePage = () => {
                 )}
               </div>
 
-              {filteredRecommended.length > 0 && !searchQuery && (
+              {filteredRecommended.length > 0 && !searchQuery && !hasActiveFilters && (
                 <div className="mb-20">
                   <div className="flex items-center justify-between mb-10">
                     <h2 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center">
