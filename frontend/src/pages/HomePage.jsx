@@ -7,6 +7,8 @@ import ErrorMessage from '../components/ErrorMessage';
 import { getAllEvents, getPopularEvents, getRecommendedEvents } from '../api/events';
 import { getMyRegistrations } from '../api/registrations';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
+import { localizeEvent } from '../utils/localizeEvent';
 import { Sparkles, Calendar, TrendingUp, LayoutGrid, List, X, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import AssistantWidget from '../components/AssistantWidget';
 import heroBg from '../assets/backg-based-from-logo.png';
@@ -17,6 +19,7 @@ const VISIBLE_INCREMENT = 10;
 
 const HomePage = () => {
   const { user, isAuthenticated, role } = useAuth();
+  const { language, t } = useLanguage();
   const [searchParams] = useSearchParams();
   const searchQuery = searchParams.get('q') || '';
 
@@ -258,15 +261,15 @@ const HomePage = () => {
               
               <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-white/40 backdrop-blur-md text-primary-700 text-xs font-bold uppercase tracking-wider mb-10 border border-white/60 shadow-sm">
                 <Sparkles className="w-3.5 h-3.5 mr-2" />
-                University Life Reimagined
+                {t('home.heroSubtitle')}
               </div>
 
               <h1 className="text-5xl font-bold text-gray-900 sm:text-6xl md:text-7xl tracking-tighter leading-[0.95] mb-8">
-                Discover <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-blue-500">University Events</span>
+                {t('home.heroTitle1')} <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-blue-500">{t('home.heroTitle2')}</span>
               </h1>
 
               <p className="max-w-2xl mx-auto text-lg md:text-xl text-gray-500 font-normal leading-relaxed">
-                Stay connected with the latest workshops, seminars, and student-led activities at the "Ștefan cel Mare" University of Suceava
+                {t('home.heroDesc')}
               </p>
             </div>
           </div>
@@ -278,19 +281,19 @@ const HomePage = () => {
                   <div className="inline-flex items-center px-6 py-3 rounded-[2rem] bg-primary-50 border border-primary-100 shadow-sm">
                     <Search className="w-4 h-4 text-primary-600 mr-3" />
                     <span className="text-gray-600 font-medium">
-                      Search results for <span className="text-primary-700 font-bold">"{searchQuery}"</span>
+                      {t('home.searchResults')} <span className="text-primary-700 font-bold">"{searchQuery}"</span>
                     </span>
                     <div className="w-px h-4 bg-primary-200 mx-4"></div>
                     <Link 
                       to="/" 
                       className="text-primary-600 hover:text-primary-800 font-bold text-sm flex items-center group"
                     >
-                      Clear
+                      {t('home.clear')}
                       <X className="w-4 h-4 ml-1.5 group-hover:rotate-90 transition-transform" />
                     </Link>
                   </div>
                   {(filteredUpcoming.length === 0 && filteredPast.length === 0 && filteredPopular.length === 0) && (
-                    <p className="mt-8 text-gray-400 font-medium italic">No matches found for your search or filters.</p>
+                    <p className="mt-8 text-gray-400 font-medium italic">{t('home.noMatchesAll')}</p>
                   )}
                 </div>
               )}
@@ -307,7 +310,7 @@ const HomePage = () => {
                     </div>
                     <div>
                       <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                        Filter By
+                        {t('home.filterBy')}
                         {activeFiltersCount > 0 && (
                           <span className="flex items-center justify-center bg-primary-600 text-white text-[10px] font-black w-5 h-5 rounded-full shadow-sm animate-in zoom-in duration-300">
                             {activeFiltersCount}
@@ -316,7 +319,7 @@ const HomePage = () => {
                       </h3>
                       {!filtersOpen && hasActiveFilters && (
                         <p className="text-xs text-gray-500 font-medium mt-0.5 animate-in fade-in slide-in-from-left-2">
-                          Filters active. Click to adjust.
+                          {t('home.filtersActive')}
                         </p>
                       )}
                     </div>
@@ -340,9 +343,10 @@ const HomePage = () => {
                         className="text-xs font-bold text-primary-600 hover:text-primary-800 flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:bg-primary-50 transition-colors"
                       >
                         <X className="w-4 h-4" />
-                        Clear filters
+                        {t('home.clearFilters')}
                       </button>
                     )}
+
                     <div className={`p-1.5 rounded-lg bg-gray-50 text-gray-400 group-hover:bg-primary-50 group-hover:text-primary-500 transition-all ${filtersOpen ? 'rotate-180' : ''}`}>
                       <ChevronDown className="w-5 h-5" />
                     </div>
@@ -354,28 +358,28 @@ const HomePage = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                       {/* Category Filter */}
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Category</label>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">{t('home.category')}</label>
                         <select
                           value={filters.category}
                           onChange={(e) => setFilters(prev => ({ ...prev, category: e.target.value }))}
                           className="w-full bg-white border border-gray-100 rounded-2xl px-4 py-3 text-sm font-semibold text-gray-700 focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all cursor-pointer outline-none appearance-none hover:border-primary-200 shadow-sm"
                         >
-                          <option value="">All Categories</option>
+                          <option value="">{t('home.allCategories')}</option>
                           {categories.map(cat => (
-                            <option key={cat} value={cat}>{cat}</option>
+                            <option key={cat} value={cat}>{t(`cat.${cat}`, cat)}</option>
                           ))}
                         </select>
                       </div>
 
                       {/* Organizer Filter */}
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Organizer</label>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">{t('home.organizer')}</label>
                         <select
                           value={filters.organizer}
                           onChange={(e) => setFilters(prev => ({ ...prev, organizer: e.target.value }))}
                           className="w-full bg-white border border-gray-100 rounded-2xl px-4 py-3 text-sm font-semibold text-gray-700 focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all cursor-pointer outline-none appearance-none hover:border-primary-200 shadow-sm"
                         >
-                          <option value="">All Organizers</option>
+                          <option value="">{t('home.allOrganizers')}</option>
                           {organizers.map(org => (
                             <option key={org} value={org}>{org}</option>
                           ))}
@@ -384,13 +388,13 @@ const HomePage = () => {
 
                       {/* Location Filter */}
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Location</label>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">{t('home.location')}</label>
                         <select
                           value={filters.location}
                           onChange={(e) => setFilters(prev => ({ ...prev, location: e.target.value }))}
                           className="w-full bg-white border border-gray-100 rounded-2xl px-4 py-3 text-sm font-semibold text-gray-700 focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all cursor-pointer outline-none appearance-none hover:border-primary-200 shadow-sm"
                         >
-                          <option value="">All Locations</option>
+                          <option value="">{t('home.allLocations')}</option>
                           {locations.map(loc => (
                             <option key={loc} value={loc}>{loc}</option>
                           ))}
@@ -399,59 +403,59 @@ const HomePage = () => {
 
                       {/* Participation Type */}
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Type</label>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">{t('home.type')}</label>
                         <select
                           value={filters.participationType}
                           onChange={(e) => setFilters(prev => ({ ...prev, participationType: e.target.value }))}
                           className="w-full bg-white border border-gray-100 rounded-2xl px-4 py-3 text-sm font-semibold text-gray-700 focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all cursor-pointer outline-none appearance-none hover:border-primary-200 shadow-sm"
                         >
-                          <option value="">All Types</option>
-                          <option value="on-site">On-site</option>
-                          <option value="online">Online</option>
-                          <option value="hybrid">Hybrid</option>
+                          <option value="">{t('home.allTypes')}</option>
+                          <option value="on-site">{t('home.onsite')}</option>
+                          <option value="online">{t('home.online')}</option>
+                          <option value="hybrid">{t('home.hybrid')}</option>
                         </select>
                       </div>
 
                       {/* Date Filter */}
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Date</label>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">{t('home.date')}</label>
                         <select
                           value={filters.dateRange}
                           onChange={(e) => setFilters(prev => ({ ...prev, dateRange: e.target.value }))}
                           className="w-full bg-white border border-gray-100 rounded-2xl px-4 py-3 text-sm font-semibold text-gray-700 focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all cursor-pointer outline-none appearance-none hover:border-primary-200 shadow-sm"
                         >
-                          <option value="">All Time</option>
-                          <option value="today">Today</option>
-                          <option value="this_week">This Week</option>
-                          <option value="this_month">This Month</option>
+                          <option value="">{t('home.allTime')}</option>
+                          <option value="today">{t('home.today')}</option>
+                          <option value="this_week">{t('home.thisWeek')}</option>
+                          <option value="this_month">{t('home.thisMonth')}</option>
                         </select>
                       </div>
 
                       {/* Entry Type */}
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Entry</label>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">{t('home.entry')}</label>
                         <select
                           value={filters.entryType}
                           onChange={(e) => setFilters(prev => ({ ...prev, entryType: e.target.value }))}
                           className="w-full bg-white border border-gray-100 rounded-2xl px-4 py-3 text-sm font-semibold text-gray-700 focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all cursor-pointer outline-none appearance-none hover:border-primary-200 shadow-sm"
                         >
-                          <option value="">All</option>
-                          <option value="free">Free Entry</option>
-                          <option value="paid">Paid Ticket</option>
+                          <option value="">{t('home.all')}</option>
+                          <option value="free">{t('home.freeEntry')}</option>
+                          <option value="paid">{t('home.paidTicket')}</option>
                         </select>
                       </div>
 
                       {/* Registration Filter */}
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Registration</label>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">{t('home.registration')}</label>
                         <select
                           value={filters.requiresRegistration}
                           onChange={(e) => setFilters(prev => ({ ...prev, requiresRegistration: e.target.value }))}
                           className="w-full bg-white border border-gray-100 rounded-2xl px-4 py-3 text-sm font-semibold text-gray-700 focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all cursor-pointer outline-none appearance-none hover:border-primary-200 shadow-sm"
                         >
-                          <option value="">All</option>
-                          <option value="yes">Requires Registration</option>
-                          <option value="no">No Registration Needed</option>
+                          <option value="">{t('home.all')}</option>
+                          <option value="yes">{t('home.regRequired')}</option>
+                          <option value="no">{t('home.noRegNeeded')}</option>
                         </select>
                       </div>
                     </div>
@@ -464,13 +468,28 @@ const HomePage = () => {
                     {Object.entries(filters).map(([key, value]) => {
                       if (!value || value === 'all') return null;
                       let label = value;
-                      if (key === 'entryType') label = value === 'free' ? 'Free Entry' : 'Paid Ticket';
-                      if (key === 'requiresRegistration') label = value === 'yes' ? 'Registration Required' : 'No Registration';
-                      if (key === 'dateRange') label = value.replace('_', ' ');
+                      if (key === 'entryType') label = value === 'free' ? t('home.freeEntry') : t('home.paidTicket');
+                      if (key === 'requiresRegistration') label = value === 'yes' ? t('home.regRequired') : t('home.noRegNeeded');
+                      if (key === 'dateRange') {
+                        if (value === 'today') label = t('home.today');
+                        else if (value === 'this_week') label = t('home.thisWeek');
+                        else if (value === 'this_month') label = t('home.thisMonth');
+                        else label = value.replace('_', ' ');
+                      }
+                      if (key === 'category') label = t(`cat.${value}`, value);
+                      if (key === 'participationType') {
+                        if (value === 'on-site') label = t('home.onsite');
+                        else if (value === 'online') label = t('home.online');
+                        else if (value === 'hybrid') label = t('home.hybrid');
+                      }
+                      
+                      let displayKey = t(`home.${key}`, key);
+                      if (key === 'dateRange') displayKey = t('home.date');
+                      if (key === 'participationType') displayKey = t('home.type');
                       
                       return (
                         <span key={key} className="inline-flex items-center px-3 py-1.5 rounded-xl bg-primary-50 text-primary-700 text-[10px] font-black uppercase tracking-wider border border-primary-100/50 shadow-sm hover:bg-primary-100 transition-colors">
-                          <span className="opacity-40 mr-1.5">{key}:</span>
+                          <span className="opacity-40 mr-1.5">{displayKey}:</span>
                           {label}
                           <button 
                             onClick={(e) => {
@@ -528,10 +547,10 @@ const HomePage = () => {
             <>
               <div className="mb-20">
                 <div className="flex items-center justify-between mb-10">
-                  <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Upcoming Events</h2>
+                  <h2 className="text-3xl font-bold text-gray-900 tracking-tight">{t('home.upcomingTitle')}</h2>
                   <div className="h-1 flex-grow mx-8 bg-gray-100 rounded-full hidden md:block opacity-50"></div>
                   <span className="text-sm font-semibold text-primary-600 bg-primary-50 px-4 py-1.5 rounded-xl border border-primary-100">
-                    {filteredUpcoming.length} {(searchQuery || hasActiveFilters) ? 'Matches' : 'Upcoming'}
+                    {filteredUpcoming.length} {(searchQuery || hasActiveFilters) ? t('home.matches') : t('home.upcoming')}
                   </span>
                 </div>
 
@@ -541,14 +560,14 @@ const HomePage = () => {
                       {searchQuery ? <Search className="w-8 h-8 text-gray-300" /> : <Calendar className="w-8 h-8 text-gray-300" />}
                     </div>
                     <p className="text-gray-400 font-bold text-lg">
-                      {(searchQuery || hasActiveFilters) ? `No upcoming events matching your criteria found.` : 'No upcoming events found. Check back soon!'}
+                      {(searchQuery || hasActiveFilters) ? t('home.noUpcomingFiltered') : t('home.noUpcoming')}
                     </p>
                   </div>
                 ) : (
                   <>
                     <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8' : 'flex flex-col gap-6'}>
                       {filteredUpcoming.slice(0, upcomingVisible).map((event) => (
-                        <EventCard key={event.id} event={event} variant={viewMode === 'list' ? 'row' : 'card'} />
+                        <EventCard key={event.id} event={localizeEvent(event, language)} variant={viewMode === 'list' ? 'row' : 'card'} />
                       ))}
                     </div>
                     
@@ -558,7 +577,7 @@ const HomePage = () => {
                           onClick={() => setUpcomingVisible(prev => prev + VISIBLE_INCREMENT)}
                           className="px-8 py-3 bg-white border border-gray-200 text-primary-600 font-bold rounded-2xl shadow-soft hover:shadow-md hover:border-primary-100 hover:bg-primary-50 transition-all active:scale-95 text-sm"
                         >
-                          See more events ({filteredUpcoming.length - upcomingVisible} left)
+                          {t('home.seeMore')} ({filteredUpcoming.length - upcomingVisible})
                         </button>
                       </div>
                     )}
@@ -571,14 +590,14 @@ const HomePage = () => {
                   <div className="flex items-center justify-between mb-10">
                     <h2 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center">
                       <Sparkles className="w-8 h-8 mr-3 text-primary-600" />
-                      Recommended for You
+                      {t('home.recommendedTitle')}
                     </h2>
                     <div className="h-1 flex-grow mx-8 bg-gray-100 rounded-full hidden md:block opacity-50"></div>
                   </div>
 
                   <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8' : 'flex flex-col gap-6'}>
                     {filteredRecommended.slice(0, recommendedVisible).map((event) => (
-                      <EventCard key={`rec-${event.id}`} event={event} variant={viewMode === 'list' ? 'row' : 'card'} />
+                      <EventCard key={`rec-${event.id}`} event={localizeEvent(event, language)} variant={viewMode === 'list' ? 'row' : 'card'} />
                     ))}
                   </div>
 
@@ -588,7 +607,7 @@ const HomePage = () => {
                         onClick={() => setRecommendedVisible(prev => prev + VISIBLE_INCREMENT)}
                         className="px-8 py-3 bg-white border border-gray-200 text-primary-600 font-bold rounded-2xl shadow-soft hover:shadow-md hover:border-primary-100 hover:bg-primary-50 transition-all active:scale-95 text-sm"
                       >
-                        See more recommendations ({filteredRecommended.length - recommendedVisible} left)
+                        {t('home.seeMore')} ({filteredRecommended.length - recommendedVisible})
                       </button>
                     </div>
                   )}
@@ -600,14 +619,14 @@ const HomePage = () => {
                   <div className="flex items-center justify-between mb-10">
                     <h2 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center">
                       <TrendingUp className="w-8 h-8 mr-3 text-primary-600" />
-                      Most Awaited Events
+                      {t('home.popularTitle')}
                     </h2>
                     <div className="h-1 flex-grow mx-8 bg-gray-100 rounded-full hidden md:block opacity-50"></div>
                   </div>
 
                   <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8' : 'flex flex-col gap-6'}>
                     {filteredPopular.slice(0, popularVisible).map((event) => (
-                      <EventCard key={`popular-${event.id}`} event={event} variant={viewMode === 'list' ? 'row' : 'card'} />
+                      <EventCard key={`popular-${event.id}`} event={localizeEvent(event, language)} variant={viewMode === 'list' ? 'row' : 'card'} />
                     ))}
                   </div>
 
@@ -617,7 +636,7 @@ const HomePage = () => {
                         onClick={() => setPopularVisible(prev => prev + VISIBLE_INCREMENT)}
                         className="px-8 py-3 bg-white border border-gray-200 text-primary-600 font-bold rounded-2xl shadow-soft hover:shadow-md hover:border-primary-100 hover:bg-primary-50 transition-all active:scale-95 text-sm"
                       >
-                        See more events ({filteredPopular.length - popularVisible} left)
+                        {t('home.seeMore')} ({filteredPopular.length - popularVisible})
                       </button>
                     </div>
                   )}
@@ -627,12 +646,12 @@ const HomePage = () => {
               {filteredPast.length > 0 && (
                 <div className="mb-16">
                   <div className="flex items-center justify-between mb-10">
-                    <h2 className="text-3xl font-bold text-gray-500 tracking-tight">Review Attended Events</h2>
+                    <h2 className="text-3xl font-bold text-gray-500 tracking-tight">{t('home.pastTitle')}</h2>
                     <div className="h-1 flex-grow mx-8 bg-gray-100 rounded-full hidden md:block opacity-50"></div>
                   </div>
                   <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 opacity-90 grayscale-[50%] hover:grayscale-0 transition-all duration-500' : 'flex flex-col gap-6 opacity-90 grayscale-[50%] hover:grayscale-0 transition-all duration-500'}>
                     {filteredPast.slice(0, pastVisible).map((event) => (
-                      <EventCard key={event.id} event={event} variant={viewMode === 'list' ? 'row' : 'card'} />
+                      <EventCard key={event.id} event={localizeEvent(event, language)} variant={viewMode === 'list' ? 'row' : 'card'} />
                     ))}
                   </div>
 
@@ -642,7 +661,7 @@ const HomePage = () => {
                         onClick={() => setPastVisible(prev => prev + VISIBLE_INCREMENT)}
                         className="px-8 py-3 bg-white border border-gray-200 text-gray-500 font-bold rounded-2xl shadow-soft hover:shadow-md hover:border-gray-300 hover:bg-gray-50 transition-all active:scale-95 text-sm"
                       >
-                        See more past events ({filteredPast.length - pastVisible} left)
+                        {t('home.seeMore')} ({filteredPast.length - pastVisible})
                       </button>
                     </div>
                   )}

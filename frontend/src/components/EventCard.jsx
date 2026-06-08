@@ -2,8 +2,11 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, Tag, User, ArrowRight, MapPin } from 'lucide-react';
 import Button from './Button';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const EventCard = ({ event, variant = 'card', isNearby = false }) => {
+  const { t } = useLanguage();
+
   if (!event) return null;
   const { 
     id, 
@@ -26,21 +29,21 @@ const EventCard = ({ event, variant = 'card', isNearby = false }) => {
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'Date TBD';
+    if (!dateString) return t('eventCard.dateTbd');
     const date = new Date(dateString);
-    if (isNaN(date.getTime())) return 'Invalid Date';
+    if (isNaN(date.getTime())) return t('eventCard.invalidDate');
     const options = { year: 'numeric', month: 'short', day: 'numeric' };
     return date.toLocaleDateString(undefined, options);
   };
 
   const formatDateRange = (start, end) => {
-    if (!start) return 'Date TBD';
+    if (!start) return t('eventCard.dateTbd');
     if (!end || isSameDay(start, end)) return formatDate(start);
     
     const d1 = new Date(start);
     const d2 = new Date(end);
     
-    if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return 'Invalid Date Range';
+    if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return t('eventCard.invalidDateRange');
 
     // Check if same year
     if (d1.getFullYear() === d2.getFullYear()) {
@@ -71,32 +74,32 @@ const EventCard = ({ event, variant = 'card', isNearby = false }) => {
           {isNearby && (
             <span className="inline-flex items-center px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider bg-indigo-100 text-indigo-700 border border-indigo-200/50">
               <MapPin className="w-3 h-3 mr-1.5" />
-              Outside Campus
+              {t('eventCard.outsideCampus')}
             </span>
           )}
           {event.confirmed_registrations_count !== undefined && (
             <span className="inline-flex items-center px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider bg-orange-50 text-orange-700 border border-orange-100/50 animate-pulse">
-              🔥 {event.confirmed_registrations_count} confirmed
+              🔥 {event.confirmed_registrations_count} {t('eventCard.confirmed')}
             </span>
           )}
           <span className="inline-flex items-center px-3 py-1 rounded-xl text-xs font-semibold uppercase tracking-wider bg-primary-50 text-primary-700 border border-primary-100/50">
             <Tag className="w-3 h-3 mr-1.5" />
-            {category_name || 'Event'}
+            {category_name ? t(`cat.${category_name}`, category_name) : t('eventCard.event')}
           </span>
         </div>
         <div className="flex flex-wrap gap-2">
           {isMultiDay && (
             <span className="inline-flex items-center px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest bg-indigo-50 text-indigo-700 border border-indigo-100/50">
-              Multi-day
+              {t('eventCard.multiDay')}
             </span>
           )}
           {is_free_entry ? (
             <span className="inline-flex items-center px-3 py-1 rounded-xl text-xs font-semibold uppercase tracking-wider bg-green-50 text-green-700 border border-green-100/50">
-              Free
+              {t('eventCard.free')}
             </span>
           ) : (
             <span className="inline-flex items-center px-3 py-1 rounded-xl text-xs font-semibold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-100/50">
-              {formattedTicketPrice ? `${formattedTicketPrice} RON` : 'Paid'}
+              {formattedTicketPrice ? `${formattedTicketPrice} RON` : t('eventCard.paid')}
             </span>
           )}
         </div>
@@ -118,7 +121,7 @@ const EventCard = ({ event, variant = 'card', isNearby = false }) => {
             <div className="bg-gray-50 p-1.5 rounded-lg mr-2.5 group-hover:bg-primary-50 transition-colors">
               <User className="w-4 h-4 text-gray-400 group-hover:text-primary-500" />
             </div>
-            {organizer_full_name || 'Staff'}
+            {organizer_full_name || t('eventCard.staff')}
           </div>
         </div>
       </div>
@@ -126,7 +129,7 @@ const EventCard = ({ event, variant = 'card', isNearby = false }) => {
       {isRow && (
         <div className="mt-4 md:mt-0 md:ml-auto">
           <div className="flex items-center text-primary-600 font-semibold text-sm group-hover:translate-x-1 transition-transform">
-            View Details <ArrowRight className="w-4 h-4 ml-1.5" />
+            {t('eventCard.viewDetails')} <ArrowRight className="w-4 h-4 ml-1.5" />
           </div>
         </div>
       )}
@@ -142,7 +145,7 @@ const EventCard = ({ event, variant = 'card', isNearby = false }) => {
         {!isRow && (
           <div className="px-6 pb-6">
             <div className="flex items-center text-primary-600 font-semibold text-sm group-hover:translate-x-1 transition-transform">
-              View Details <ArrowRight className="w-4 h-4 ml-1.5" />
+              {t('eventCard.viewDetails')} <ArrowRight className="w-4 h-4 ml-1.5" />
             </div>
           </div>
         )}

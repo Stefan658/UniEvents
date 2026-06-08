@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { LogOut, LayoutDashboard, Shield, Menu, X, Home, Bookmark, ExternalLink, Clock, MapPin, Search, Calendar, ChevronRight } from 'lucide-react';
 import Button from './Button';
 import { logoutUser } from '../api/auth';
@@ -9,6 +10,7 @@ import logo from '../assets/unievents-logo-small-no_bg.png';
 
 const Navbar = () => {
   const { user, logout, isAuthenticated, role } = useAuth();
+  const { language, setLanguage, t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -104,11 +106,11 @@ const Navbar = () => {
   };
 
   const navLinks = [
-    { name: 'Browse Events', path: '/', icon: Home },
-    { name: 'Uni Nearby', path: '/nearby', icon: MapPin },
-    ...(isAuthenticated && role === 'student' ? [{ name: 'My Registrations', path: '/my-registrations', icon: Bookmark }] : []),
-    ...(isAuthenticated && role === 'organizer' ? [{ name: 'Dashboard', path: '/organizer', icon: LayoutDashboard }] : []),
-    ...(isAuthenticated && role === 'admin' ? [{ name: 'Admin Panel', path: '/admin', icon: Shield }] : []),
+    { name: t('nav.browseEvents'), path: '/', icon: Home },
+    { name: t('nav.uniNearby'), path: '/nearby', icon: MapPin },
+    ...(isAuthenticated && role === 'student' ? [{ name: t('nav.myRegistrations'), path: '/my-registrations', icon: Bookmark }] : []),
+    ...(isAuthenticated && role === 'organizer' ? [{ name: t('nav.dashboard'), path: '/organizer', icon: LayoutDashboard }] : []),
+    ...(isAuthenticated && role === 'admin' ? [{ name: t('nav.adminPanel'), path: '/admin', icon: Shield }] : []),
   ];
 
   const isActive = (path) => location.pathname === path;
@@ -155,7 +157,7 @@ const Navbar = () => {
                   className="px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center space-x-2 text-gray-500 hover:bg-gray-50 hover:text-gray-900"
                 >
                   <Clock className="h-4 w-4 text-gray-400" />
-                  <span className="hidden xl:inline">USV Schedule</span>
+                  <span className="hidden xl:inline">{t('nav.usvSchedule')}</span>
                   <ExternalLink className="h-3 w-3 text-gray-300" />
                 </a>
               </div>
@@ -175,7 +177,7 @@ const Navbar = () => {
                       loadEventsForSuggestions();
                     }}
                     onKeyDown={handleKeyDown}
-                    placeholder="Search events..."
+                    placeholder={t('nav.searchPlaceholder')}
                     className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
                   />
                 </form>
@@ -184,7 +186,7 @@ const Navbar = () => {
                 {showSuggestions && suggestions.length > 0 && (
                   <div className="absolute top-full mt-2 w-[320px] left-0 md:left-auto md:right-0 bg-white border border-gray-100 rounded-2xl shadow-xl z-[100] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="p-2 border-b border-gray-50 bg-gray-50/50">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 px-2">Suggestions</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 px-2">{t('nav.suggestions')}</span>
                     </div>
                     <div className="max-h-[380px] overflow-y-auto">
                       {suggestions.map((event) => (
@@ -213,7 +215,7 @@ const Navbar = () => {
                         onClick={handleSearch}
                         className="text-[11px] font-black uppercase tracking-widest hover:underline"
                       >
-                        See all results for "{searchQuery}"
+                        {t('nav.seeAllResults')} "{searchQuery}"
                       </button>
                     </div>
                   </div>
@@ -223,12 +225,29 @@ const Navbar = () => {
           </div>
 
           <div className="flex items-center space-x-4">
+            
+            {/* Language Switch */}
+            <div className="hidden sm:flex items-center bg-gray-100 p-1 rounded-xl">
+              <button 
+                onClick={() => setLanguage('en')} 
+                className={`px-2 py-1 text-[10px] font-bold rounded-lg transition-all ${language === 'en' ? 'bg-white text-primary-700 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+              >
+                EN
+              </button>
+              <button 
+                onClick={() => setLanguage('ro')} 
+                className={`px-2 py-1 text-[10px] font-bold rounded-lg transition-all ${language === 'ro' ? 'bg-white text-primary-700 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+              >
+                RO
+              </button>
+            </div>
+
             {isAuthenticated ? (
               <div className="flex items-center space-x-3">
                 <div className="hidden md:flex flex-col items-end mr-2">
                   <span className="text-sm font-semibold text-gray-900 leading-none mb-1">{user.name || user.email.split('@')[0]}</span>
                   <span className="text-[10px] font-bold uppercase tracking-wider text-primary-600 bg-primary-50 px-1.5 py-0.5 rounded-md leading-none">
-                    {role === 'student' ? 'Participant' : role}
+                    {role === 'student' ? t('nav.participant') : t(`nav.${role}`)}
                   </span>
                 </div>
                 <Button variant="secondary" onClick={handleLogout} className="!p-2.5 !rounded-xl border-gray-100 hover:border-red-100 hover:bg-red-50 hover:text-red-600 transition-all">
@@ -237,7 +256,7 @@ const Navbar = () => {
               </div>
             ) : (
               <Link to="/login">
-                <Button className="shadow-primary-100 shadow-lg hover:shadow-primary-200">Sign In</Button>
+                <Button className="shadow-primary-100 shadow-lg hover:shadow-primary-200">{t('nav.signIn')}</Button>
               </Link>
             )}
             
@@ -251,6 +270,23 @@ const Navbar = () => {
       {/* Mobile menu */}
       {isOpen && (
         <div className="sm:hidden bg-white border-b border-gray-100 p-4 space-y-4">
+          
+          {/* Mobile Language Switch */}
+          <div className="flex items-center justify-center gap-2 mb-4 bg-gray-50 p-2 rounded-xl">
+            <button 
+              onClick={() => { setLanguage('en'); setIsOpen(false); }} 
+              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${language === 'en' ? 'bg-white text-primary-700 shadow-sm' : 'text-gray-400'}`}
+            >
+              English
+            </button>
+            <button 
+              onClick={() => { setLanguage('ro'); setIsOpen(false); }} 
+              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${language === 'ro' ? 'bg-white text-primary-700 shadow-sm' : 'text-gray-400'}`}
+            >
+              Română
+            </button>
+          </div>
+
           {/* Mobile Search */}
           <form onSubmit={handleSearch} className="relative">
             <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
@@ -261,7 +297,7 @@ const Navbar = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={loadEventsForSuggestions}
-              placeholder="Search events..."
+              placeholder={t('nav.searchPlaceholder')}
               className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-10 pr-4 text-base focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
             />
           </form>
@@ -269,7 +305,7 @@ const Navbar = () => {
           {/* Mobile Suggestions (Simplified) */}
           {suggestions.length > 0 && (
             <div className="space-y-1 py-2">
-              <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 px-4 mb-2">Top Matches</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 px-4 mb-2">{t('nav.suggestions')}</p>
               {suggestions.map((event) => (
                 <button
                   key={event.id}
@@ -306,7 +342,7 @@ const Navbar = () => {
               className="block px-4 py-3 rounded-xl text-base font-bold text-gray-600"
               onClick={() => setIsOpen(false)}
             >
-              Orar USV
+              {t('nav.usvSchedule')}
             </a>
           </div>
         </div>
