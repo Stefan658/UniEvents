@@ -230,6 +230,21 @@ def update_event_status(event_id, new_status):
 
     new_status = new_status.lower()
 
+    # Lifecycle Hardening: Prevent approving or cancelling past events
+    now = datetime.utcnow()
+    event_end = event.end_at or event.start_at
+    is_past = event_end < now
+
+    # 1. Block approving/publishing expired events
+    if new_status in ["published", "active"] and is_past:
+        raise ValueError("Cannot approve an event after it has ended.")
+
+    # 2. Block cancelling already published/active past events
+    if new_status == "cancelled" and event.status in ["published", "active"] and is_past:
+        raise ValueError("Cannot cancel an event after it has ended.")
+    
+    # Note: Cancelling an expired PENDING event is allowed (cleanup).
+
     # Hardening: Check for overlapping published events
     if new_status in ["published", "active"]:
         loc_normalized = event.location.strip().lower()

@@ -380,31 +380,41 @@ const AdminDashboardPage = () => {
                         </td>
                         <td className="px-8 py-6">
                           {(() => {
+                            const isExpired = new Date(event.end_at || event.start_at) < new Date();
                             const { warning, blocking } = checkConflicts(event);
-                            if (blocking.length > 0) {
-                              const blockingEvent = localizeEvent(blocking[0], language);
-                              return (
-                                <div className="flex items-start bg-red-50 text-red-700 p-3 rounded-xl border border-red-100 max-w-xs">
-                                  <XCircle className="w-4 h-4 mr-2 shrink-0 mt-0.5" />
-                                  <div>
-                                    <p className="text-[10px] font-black uppercase tracking-widest leading-none mb-1">{t('admin.blockingConflict')}</p>
-                                    <p className="text-[10px] font-medium leading-tight">{t('admin.blockingDesc')} '{blockingEvent.title}'.</p>
+                            
+                            return (
+                              <div className="space-y-2">
+                                {isExpired && activeTab === 'pending' && (
+                                  <div className="flex items-start bg-gray-100 text-gray-700 p-3 rounded-xl border border-gray-200 max-w-xs">
+                                    <Clock className="w-4 h-4 mr-2 shrink-0 mt-0.5" />
+                                    <div>
+                                      <p className="text-[10px] font-black uppercase tracking-widest leading-none mb-1">{t('admin.expiredPending')}</p>
+                                      <p className="text-[10px] font-medium leading-tight">{t('admin.expiredPendingDesc')}</p>
+                                    </div>
                                   </div>
-                                </div>
-                              );
-                            }
-                            if (warning.length > 0) {
-                              return (
-                                <div className="flex items-start bg-amber-50 text-amber-700 p-3 rounded-xl border border-amber-100 max-w-xs">
-                                  <AlertTriangle className="w-4 h-4 mr-2 shrink-0 mt-0.5" />
-                                  <div>
-                                    <p className="text-[10px] font-black uppercase tracking-widest leading-none mb-1">{t('admin.warningConflict')}</p>
-                                    <p className="text-[10px] font-medium leading-tight">{t('admin.warningDesc').replace('{count}', warning.length)}</p>
+                                )}
+                                {blocking.length > 0 ? (
+                                  <div className="flex items-start bg-red-50 text-red-700 p-3 rounded-xl border border-red-100 max-w-xs">
+                                    <XCircle className="w-4 h-4 mr-2 shrink-0 mt-0.5" />
+                                    <div>
+                                      <p className="text-[10px] font-black uppercase tracking-widest leading-none mb-1">{t('admin.blockingConflict')}</p>
+                                      <p className="text-[10px] font-medium leading-tight">{t('admin.blockingDesc')} '{localizeEvent(blocking[0], language).title}'.</p>
+                                    </div>
                                   </div>
-                                </div>
-                              );
-                            }
-                            return <span className="text-[10px] font-black uppercase tracking-widest text-gray-300">{t('admin.noIssues')}</span>;
+                                ) : warning.length > 0 ? (
+                                  <div className="flex items-start bg-amber-50 text-amber-700 p-3 rounded-xl border border-amber-100 max-w-xs">
+                                    <AlertTriangle className="w-4 h-4 mr-2 shrink-0 mt-0.5" />
+                                    <div>
+                                      <p className="text-[10px] font-black uppercase tracking-widest leading-none mb-1">{t('admin.warningConflict')}</p>
+                                      <p className="text-[10px] font-medium leading-tight">{t('admin.warningDesc').replace('{count}', warning.length)}</p>
+                                    </div>
+                                  </div>
+                                ) : !isExpired && (
+                                  <span className="text-[10px] font-black uppercase tracking-widest text-gray-300">{t('admin.noIssues')}</span>
+                                )}
+                              </div>
+                            );
                           })()}
                         </td>
                         <td className="px-8 py-6 text-right">
@@ -413,13 +423,17 @@ const AdminDashboardPage = () => {
                               <>
                                 <button 
                                   onClick={() => handleStatusUpdate(event.id, 'published')}
-                                  disabled={actionLoading || checkConflicts(event).blocking.length > 0}
+                                  disabled={actionLoading || checkConflicts(event).blocking.length > 0 || (new Date(event.end_at || event.start_at) < new Date())}
                                   className={`p-2 rounded-xl transition-all ${
-                                    checkConflicts(event).blocking.length > 0 
+                                    (checkConflicts(event).blocking.length > 0 || (new Date(event.end_at || event.start_at) < new Date()))
                                       ? 'text-gray-200 cursor-not-allowed' 
                                       : 'text-gray-400 hover:text-green-600 hover:bg-green-50'
                                   }`}
-                                  title={checkConflicts(event).blocking.length > 0 ? t('admin.cannotApprove') : t('admin.approvePublish')}
+                                  title={
+                                    (new Date(event.end_at || event.start_at) < new Date())
+                                      ? t('admin.expiredPending')
+                                      : (checkConflicts(event).blocking.length > 0 ? t('admin.cannotApprove') : t('admin.approvePublish'))
+                                  }
                                 >
                                   <CheckCircle className="w-5 h-5" />
                                 </button>

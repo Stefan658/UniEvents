@@ -158,7 +158,14 @@ export const translations = {
       contactUs: "Contact Us",
       tbd: "TBD",
       invalidDate: "Invalid Date",
-      invalidTime: "Invalid Time"
+      invalidTime: "Invalid Time",
+      feedbackSuccess: "Thank you for your feedback!",
+      feedbackError: "Failed to submit feedback.",
+      feedbackDuplicate: "You have already submitted feedback for this event.",
+      feedbackLoginRequired: "Please log in to leave feedback.",
+      feedbackOnlyAfterEvent: "Feedback can only be submitted after the event has ended.",
+      feedbackOnlyConfirmed: "Only confirmed attendees can leave feedback.",
+      feedbackUpdated: "Your feedback is now visible."
     },
     assistant: {
       title: "UniEvents Assistant",
@@ -591,7 +598,14 @@ export const translations = {
       contactUs: "Contactează-ne",
       tbd: "TBD",
       invalidDate: "Dată Invalidă",
-      invalidTime: "Oră Invalidă"
+      invalidTime: "Oră Invalidă",
+      feedbackSuccess: "Îți mulțumim pentru feedback!",
+      feedbackError: "Feedback-ul nu a putut fi trimis.",
+      feedbackDuplicate: "Ai trimis deja feedback pentru acest eveniment.",
+      feedbackLoginRequired: "Te rugăm să te autentifici pentru a lăsa feedback.",
+      feedbackOnlyAfterEvent: "Feedback-ul poate fi trimis doar după încheierea evenimentului.",
+      feedbackOnlyConfirmed: "Doar participanții confirmați pot lăsa feedback.",
+      feedbackUpdated: "Feedback-ul tău este acum vizibil."
     },
     assistant: {
       title: "Asistent UniEvents",
@@ -862,7 +876,9 @@ export const translations = {
       sortDefault: "Implicit",
       sortBestRating: "Cel mai bun rating",
       sortMostRegistrations: "Cele mai multe înscrieri",
-      sortMostEvents: "Cele mai multe evenimente"
+      sortMostEvents: "Cele mai multe evenimente",
+      expiredPending: "Eveniment în așteptare expirat",
+      expiredPendingDesc: "Data acestui eveniment a trecut și nu mai poate fi aprobat."
     }
   }
 };

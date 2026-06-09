@@ -101,6 +101,18 @@ const EventDetailsPage = () => {
   };
 
   useEffect(() => {
+    if (window.location.hash === '#feedback' && !loading && event) {
+      const timer = setTimeout(() => {
+        const el = document.getElementById('feedback');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, event]);
+
+  useEffect(() => {
     const fetchEventData = async () => {
       try {
         const [eventData, materialsData] = await Promise.all([
@@ -266,9 +278,25 @@ const EventDetailsPage = () => {
       
       const response = await submitFeedback(payload);
       setUserFeedback(response);
-      setFeedbackMessage({ type: 'success', text: 'Thank you for your feedback!' });
+      setFeedbackMessage({ type: 'success', text: t('eventDetails.feedbackSuccess') });
+      
+      // Refresh global feedback data (summary and list)
+      fetchFeedbackData();
     } catch (err) {
-      setFeedbackMessage({ type: 'error', text: err || 'Failed to submit feedback.' });
+      const errorMsg = err?.response?.data?.error || err?.message || String(err);
+      let translatedError = t('eventDetails.feedbackError');
+
+      if (errorMsg.toLowerCase().includes('duplicate') || errorMsg.toLowerCase().includes('already')) {
+        translatedError = t('eventDetails.feedbackDuplicate');
+      } else if (errorMsg.toLowerCase().includes('confirmed') || errorMsg.toLowerCase().includes('attendee')) {
+        translatedError = t('eventDetails.feedbackOnlyConfirmed');
+      } else if (errorMsg.toLowerCase().includes('ended') || errorMsg.toLowerCase().includes('after') || errorMsg.toLowerCase().includes('future')) {
+        translatedError = t('eventDetails.feedbackOnlyAfterEvent');
+      } else if (errorMsg.toLowerCase().includes('unauthorized') || errorMsg.toLowerCase().includes('token') || err?.response?.status === 401) {
+        translatedError = t('eventDetails.feedbackLoginRequired');
+      }
+
+      setFeedbackMessage({ type: 'error', text: translatedError });
     } finally {
       setFeedbackLoading(false);
     }
@@ -723,7 +751,7 @@ const EventDetailsPage = () => {
                   {/* Admin Moderation Actions (Independent) */}
                   {role === 'admin' && (
                     <div className="mb-6 space-y-4">
-                      {(event.status === 'published' || event.status === 'active') && (
+                      {(event.status === 'published' || event.status === 'active') && !isPastEvent && (
                         <div className="space-y-3">
                           <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 text-center mb-2">{t('eventDetails.moderationActions')}</p>
                           <Button 
@@ -858,7 +886,7 @@ const EventDetailsPage = () => {
                           </div>
                           
                           {/* Feedback Section for Past Events */}
-                          <div className="pt-6 border-t border-gray-100">
+                          <div id="feedback" className="pt-6 border-t border-gray-100">
                             <h4 className="text-lg font-semibold font-black text-gray-900 mb-4 tracking-tight">{t('eventDetails.eventFeedback')}</h4>
                             
                             {!isAuthenticated ? (

@@ -1,6 +1,10 @@
+from datetime import datetime
 from flask import Blueprint, request, jsonify
 from backend.app.services import feedback_service
 from backend.app.utils.validators import validate_feedback_payload
+from backend.app.utils.decorators import token_required
+from backend.app.models.registration import Registration
+from backend.app.models.event import Event
 
 feedback_bp = Blueprint("feedback", __name__)
 
@@ -27,15 +31,47 @@ def _serialize_feedback(feedback):
 
 
 @feedback_bp.route("/api/feedback", methods=["POST"])
-def add_feedback():
+@token_required
+def add_feedback(current_user):
     """Adaugă un nou feedback pentru un eveniment."""
     data = request.get_json()
 
     try:
-        validated_data = validate_feedback_payload(data) # This can raise ValueError with Romanian messages
+        if not data:
+            return jsonify({"error": "Invalid JSON payload."}), 400
+            
+        event_id = data.get("event_id")
+        if not event_id:
+            return jsonify({"error": "Event ID is required."}), 400
+
+        # Override user_id with authenticated current_user
+        data["user_id"] = current_user.id
+        
+        validated_data = validate_feedback_payload(data) 
+        
+        # Guard: Check if user is a confirmed attendee
+        registration = Registration.query.filter_by(
+            user_id=current_user.id,
+            event_id=event_id,
+            status="confirmed"
+        ).first()
+        
+        if not registration:
+            return jsonify({"error": "Only confirmed attendees can leave feedback."}), 403
+
+        # Guard: Check if event has passed
+        event = Event.query.get(event_id)
+        if not event:
+             return jsonify({"error": "Event not found."}), 404
+             
+        # Fallback to start_at if end_at is missing
+        event_end_time = event.end_at if event.end_at else event.start_at
+        if event_end_time > datetime.utcnow():
+            return jsonify({"error": "Feedback can only be submitted after the event has ended."}), 403
+
         new_feedback = feedback_service.create_feedback(
-            user_id=validated_data["user_id"],
-            event_id=validated_data["event_id"],
+            user_id=current_user.id,
+            event_id=event_id,
             rating=validated_data["rating"],
             comment=validated_data["comment"],
         )
@@ -46,13 +82,12 @@ def add_feedback():
         return jsonify({
             "message": "Feedback created successfully.",
             "data": _serialize_feedback(full_feedback)
-        }), 201 # Changed message
+        }), 201 
     except ValueError as e:
-        # Check if the error is a specific duplicate error, otherwise treat as generic validation error
-        if str(e).startswith("FeedbackDuplicateError:"): # Changed message
-            return jsonify({"error": "Feedback for this user and event already exists."}), 409
-        return jsonify({"error": "Invalid input data."}), 400 # Catching generic ValueError from validators/services
-    except Exception: # Changed message, removed Romanian comment
+        if str(e).startswith("FeedbackDuplicateError:"): 
+            return jsonify({"error": "You have already submitted feedback for this event."}), 409
+        return jsonify({"error": str(e)}), 400 
+    except Exception: 
         return jsonify({"error": "An internal server error occurred."}), 500
 
 
