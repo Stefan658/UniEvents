@@ -1,9 +1,10 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
+import AssistantWidget from './components/AssistantWidget';
 
 // Pages
 import HomePage from './pages/HomePage';
@@ -17,6 +18,27 @@ import AdminDashboardPage from './pages/AdminDashboardPage';
 import MyRegistrationsPage from './pages/MyRegistrationsPage';
 import UniNearbyPage from './pages/UniNearbyPage';
 import globalBg from './assets/backg.png';
+
+/**
+ * Controller for AssistantWidget visibility.
+ * Visible to students and guests.
+ * Hidden on admin/organizer routes and auth pages.
+ */
+const AssistantWidgetController = () => {
+  const { role } = useAuth();
+  const location = useLocation();
+  
+  // Hide on management and auth-specific routes
+  const hideOnPaths = ['/login', '/organizer', '/admin'];
+  const isHiddenPath = hideOnPaths.some(path => location.pathname.startsWith(path));
+  
+  // Only show for students/guests
+  const isAllowedRole = role !== 'organizer' && role !== 'admin';
+  
+  if (isHiddenPath || !isAllowedRole) return null;
+  
+  return <AssistantWidget />;
+};
 
 function App() {
   return (
@@ -106,6 +128,7 @@ function App() {
               </footer>
             </div>
           </div>
+          <AssistantWidgetController />
         </Router>
       </AuthProvider>
     </LanguageProvider>

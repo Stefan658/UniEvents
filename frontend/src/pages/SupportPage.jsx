@@ -200,9 +200,8 @@ const SupportPage = () => {
         )}
 
         <div className="mt-12 flex justify-center">
-          <button 
-            onClick={() => alert('AI Assistant coming soon')}
-            className="bg-white p-6 rounded-3xl border border-gray-100/50 shadow-soft flex items-start space-x-4 text-left hover:bg-gray-50 transition-all active:scale-95 group max-w-sm w-full"
+          <div 
+            className="bg-white p-6 rounded-3xl border border-gray-100/50 shadow-soft flex items-start space-x-4 text-left hover:bg-gray-50 transition-all group max-w-sm w-full"
           >
             <div className="bg-blue-50 p-3 rounded-2xl text-blue-600 group-hover:bg-blue-100 transition-colors">
               <MessageSquare className="w-6 h-6" />
@@ -210,9 +209,9 @@ const SupportPage = () => {
             <div>
               <h4 className="font-bold text-gray-900 mb-1">Live Chat</h4>
               <p className="text-sm text-gray-500 font-medium mb-1">Available Mon-Fri, 9:00 - 17:00</p>
-              <span className="text-[10px] font-black uppercase tracking-wider text-blue-600/60 group-hover:text-blue-600 transition-colors">Launch Assistant</span>
+              <span className="text-[10px] font-black uppercase tracking-wider text-blue-600/60 transition-colors">Launch via the AI button in the bottom-right</span>
             </div>
-          </button>
+          </div>
         </div>
       </div>
     </PageContainer>

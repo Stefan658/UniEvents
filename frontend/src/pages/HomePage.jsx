@@ -10,7 +10,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { localizeEvent } from '../utils/localizeEvent';
 import { Sparkles, Calendar, TrendingUp, LayoutGrid, List, X, Search, ChevronDown, ChevronUp } from 'lucide-react';
-import AssistantWidget from '../components/AssistantWidget';
 import heroBg from '../assets/backg-based-from-logo.png';
 import globalBg from '../assets/backg.png';
 
@@ -671,7 +670,6 @@ const HomePage = () => {
           )}
         </PageContainer>
       </div>
-      {(role !== 'organizer' && role !== 'admin') && <AssistantWidget />}
     </div>
   );
 };
