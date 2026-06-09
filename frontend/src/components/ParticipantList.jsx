@@ -3,8 +3,10 @@ import { getEventRegistrations } from '../api/registrations';
 import Loader from './Loader';
 import ErrorMessage from './ErrorMessage';
 import { User, Mail, Calendar } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const ParticipantList = ({ eventId }) => {
+  const { language, t } = useLanguage();
   const [participants, setParticipants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -27,7 +29,7 @@ const ParticipantList = ({ eventId }) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return 'N/A';
-    return date.toLocaleDateString();
+    return date.toLocaleDateString(language === 'ro' ? 'ro-RO' : 'en-US');
   };
 
   if (loading) return <Loader />;
@@ -37,15 +39,15 @@ const ParticipantList = ({ eventId }) => {
     <div className="overflow-x-auto">
       {participants.length === 0 ? (
         <div className="text-center py-8 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-          <p className="text-gray-500 italic">No participants registered yet.</p>
+          <p className="text-gray-500 italic">{t('participants.noParticipants')}</p>
         </div>
       ) : (
         <table className="w-full text-left">
           <thead>
             <tr className="border-b border-gray-100">
-              <th className="px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Participant</th>
-              <th className="px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Registration Date</th>
-              <th className="px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Status</th>
+              <th className="px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">{t('participants.participantHeader')}</th>
+              <th className="px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">{t('participants.regDateHeader')}</th>
+              <th className="px-4 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">{t('participants.statusHeader')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -57,9 +59,9 @@ const ParticipantList = ({ eventId }) => {
                       {reg.user_full_name?.charAt(0) || <User className="w-5 h-5" />}
                     </div>
                     <div>
-                      <div className="font-semibold text-gray-900">{reg.user_full_name || 'Anonymous Student'}</div>
+                      <div className="font-semibold text-gray-900">{reg.user_full_name || t('participants.anonymous')}</div>
                       <div className="text-xs text-gray-500 flex items-center">
-                        <Mail className="w-3 h-3 mr-1" /> {reg.user_email || 'No email provided'}
+                        <Mail className="w-3 h-3 mr-1" /> {reg.user_email || t('participants.noEmail')}
                       </div>
                     </div>
                   </div>
@@ -74,7 +76,7 @@ const ParticipantList = ({ eventId }) => {
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                     reg.status === 'confirmed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
                   }`}>
-                    {reg.status || 'Registered'}
+                    {t(`status.${reg.status}`, reg.status) || t('participants.registered')}
                   </span>
                 </td>
               </tr>

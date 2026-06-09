@@ -13,27 +13,42 @@ import {
   RefreshCcw
 } from 'lucide-react';
 import { sendAssistantMessage } from '../api/assistant';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const AssistantWidget = () => {
   const navigate = useNavigate();
+  const { language, t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [suggestions, setSuggestions] = useState([
-    "Ce evenimente sunt populare?",
-    "Ce evenimente online sunt disponibile?",
-    "Ce îmi recomanzi?",
-    "Ce badge-uri am?"
-  ]);
+  const [suggestions, setSuggestions] = useState([]);
   
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      sender: 'bot',
-      text: "Salut! Te pot ajuta să descoperi evenimente, recomandări, badge-uri sau lista de așteptare.",
-      timestamp: new Date()
+  const [messages, setMessages] = useState([]);
+
+  useEffect(() => {
+    if (messages.length === 0) {
+      setMessages([
+        {
+          id: 1,
+          sender: 'bot',
+          text: t('assistant.welcome'),
+          timestamp: new Date()
+        }
+      ]);
     }
-  ]);
+  }, [t, messages.length]);
+
+  useEffect(() => {
+    // Only set initial suggestions if we haven't received any from the bot yet
+    if (messages.length <= 1) {
+      setSuggestions([
+        t('assistant.promptPopular'),
+        t('assistant.promptOnline'),
+        t('assistant.promptRecommend'),
+        t('assistant.promptBadges')
+      ]);
+    }
+  }, [t, language, messages.length]);
 
   const messagesEndRef = useRef(null);
 
@@ -83,7 +98,7 @@ const AssistantWidget = () => {
       const errorMessage = {
         id: Date.now() + 1,
         sender: 'bot',
-        text: "Ne pare rău, a apărut o eroare. Te rugăm să încerci din nou mai târziu.",
+        text: t('assistant.error'),
         isError: true,
         timestamp: new Date()
       };
@@ -94,13 +109,13 @@ const AssistantWidget = () => {
   };
 
   const formatTime = (date) => {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleTimeString(language === 'ro' ? 'ro-RO' : 'en-US', { hour: '2-digit', minute: '2-digit' });
   };
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
-    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleDateString(language === 'ro' ? 'ro-RO' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
   if (typeof document === 'undefined') return null;
@@ -139,8 +154,8 @@ const AssistantWidget = () => {
                 <Sparkles className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="font-black text-lg leading-tight tracking-tight">UniEvents Assistant</h3>
-                <p className="text-[10px] font-bold text-blue-100 uppercase tracking-widest opacity-80">Online & Ready to Help</p>
+                <h3 className="font-black text-lg leading-tight tracking-tight">{t('assistant.title')}</h3>
+                <p className="text-[10px] font-bold text-blue-100 uppercase tracking-widest opacity-80">{t('assistant.onlineReady')}</p>
               </div>
             </div>
             <button 
@@ -191,11 +206,11 @@ const AssistantWidget = () => {
                               </span>
                               <span className="flex items-center">
                                 <Tag className="w-3 h-3 mr-1" />
-                                {event.category_name || 'Event'}
+                                {event.category_name || t('assistant.event')}
                               </span>
                             </div>
                             <div className="mt-2 flex items-center text-[10px] font-black text-primary-600 uppercase tracking-widest">
-                              View Details <ChevronRight className="w-3 h-3 ml-1" />
+                              {t('assistant.viewDetails')} <ChevronRight className="w-3 h-3 ml-1" />
                             </div>
                           </div>
                         ))}
@@ -212,7 +227,7 @@ const AssistantWidget = () => {
               <div className="flex justify-start">
                 <div className="bg-white border border-gray-100 p-4 rounded-3xl rounded-tl-none shadow-sm flex items-center space-x-2">
                   <RefreshCcw className="w-4 h-4 text-primary-500 animate-spin" />
-                  <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Assistant is thinking...</span>
+                  <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t('assistant.thinking')}</span>
                 </div>
               </div>
             )}
@@ -244,7 +259,7 @@ const AssistantWidget = () => {
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                placeholder="Ask about events, recommendations..."
+                placeholder={t('assistant.placeholder')}
                 className="w-full pl-5 pr-14 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
                 disabled={isLoading}
               />
@@ -281,7 +296,7 @@ const AssistantWidget = () => {
               <div className="relative">
                 <div className="absolute inset-0 bg-primary-400 rounded-full animate-ping opacity-75"></div>
                 <div className="relative bg-primary-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-sm">
-                  AI
+                  {t('assistant.ai')}
                 </div>
               </div>
             </div>

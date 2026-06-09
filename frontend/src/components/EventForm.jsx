@@ -3,14 +3,16 @@ import InputField from './InputField';
 import Button from './Button';
 import { getAllCategories } from '../api/categories';
 import Loader from './Loader';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const EventForm = ({ 
   initialData, 
   onSubmit, 
   onCancel,
   isLoading,
-  buttonText = 'Save Event' 
+  buttonText
 }) => {
+  const { t } = useLanguage();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -144,18 +146,18 @@ const EventForm = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div className="md:col-span-2">
           <InputField
-            label="Event Title"
+            label={t('eventForm.titleLabel')}
             name="title"
             value={formData.title}
             onChange={handleChange}
-            placeholder="e.g., Annual Tech Symposium"
+            placeholder={t('eventForm.titlePlaceholder')}
             required
           />
         </div>
 
         <div className="md:col-span-2">
           <label className="block text-sm font-bold text-gray-700 tracking-tight mb-2">
-            Description <span className="text-red-500">*</span>
+            {t('eventForm.descLabel')} <span className="text-red-500">*</span>
           </label>
           <textarea
             name="description"
@@ -164,12 +166,12 @@ const EventForm = ({
             rows="5"
             required
             className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 font-medium placeholder:text-gray-400"
-            placeholder="Tell us more about the event..."
+            placeholder={t('eventForm.descPlaceholder')}
           ></textarea>
         </div>
 
         <InputField
-          label="Start Date & Time"
+          label={t('eventForm.startLabel')}
           name="start_at"
           type="datetime-local"
           value={formData.start_at}
@@ -178,7 +180,7 @@ const EventForm = ({
         />
 
         <InputField
-          label="End Date & Time"
+          label={t('eventForm.endLabel')}
           name="end_at"
           type="datetime-local"
           value={formData.end_at}
@@ -187,17 +189,17 @@ const EventForm = ({
         />
 
         <InputField
-          label="Location"
+          label={t('eventForm.locLabel')}
           name="location"
           value={formData.location}
           onChange={handleChange}
-          placeholder={formData.participation_type === 'online' ? 'Optional for online events' : 'e.g., Main Auditorium'}
+          placeholder={formData.participation_type === 'online' ? t('eventForm.locPlaceholderOnline') : t('eventForm.locPlaceholderOnsite')}
           required={formData.participation_type !== 'online'}
         />
 
         <div>
           <label className="block text-sm font-bold text-gray-700 tracking-tight mb-2">
-            Category <span className="text-red-500">*</span>
+            {t('eventForm.catLabel')} <span className="text-red-500">*</span>
           </label>
           <div className="relative">
             <select
@@ -207,10 +209,10 @@ const EventForm = ({
               required
               className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 font-medium appearance-none"
             >
-              <option value="">Select a category</option>
+              <option value="">{t('eventForm.selectCat')}</option>
               {categories.map((cat) => (
                 <option key={cat.id} value={cat.id}>
-                  {cat.name}
+                  {t(`cat.${cat.name}`, cat.name)}
                 </option>
               ))}
             </select>
@@ -222,7 +224,7 @@ const EventForm = ({
 
         <div>
           <label className="block text-sm font-bold text-gray-700 tracking-tight mb-2">
-            Participation Type <span className="text-red-500">*</span>
+            {t('eventForm.partTypeLabel')} <span className="text-red-500">*</span>
           </label>
           <div className="relative">
             <select
@@ -232,9 +234,9 @@ const EventForm = ({
               required
               className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 font-medium appearance-none"
             >
-              <option value="on-site">On-site</option>
-              <option value="online">Online</option>
-              <option value="hybrid">Hybrid</option>
+              <option value="on-site">{t('eventForm.onsite')}</option>
+              <option value="online">{t('eventForm.online')}</option>
+              <option value="hybrid">{t('eventForm.hybrid')}</option>
             </select>
             <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-gray-400">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -243,19 +245,19 @@ const EventForm = ({
         </div>
 
         <InputField
-          label="Max Participants"
+          label={t('eventForm.maxPartLabel')}
           name="max_participants"
           type="number"
           value={formData.max_participants || ''}
           onChange={handleChange}
-          placeholder="Leave empty for unlimited"
+          placeholder={t('eventForm.maxPartPlaceholder')}
         />
 
         {formData.participation_type !== 'on-site' && (
           <>
             <div>
               <label className="block text-sm font-bold text-gray-700 tracking-tight mb-2">
-                Online Platform <span className="text-red-500">*</span>
+                {t('eventForm.platformLabel')} <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <select
@@ -265,12 +267,12 @@ const EventForm = ({
                   required
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 font-medium appearance-none"
                 >
-                  <option value="">Select a platform</option>
+                  <option value="">{t('eventForm.selectPlatform')}</option>
                   <option value="zoom">Zoom</option>
                   <option value="google-meet">Google Meet</option>
                   <option value="ms-teams">Microsoft Teams</option>
                   <option value="discord">Discord</option>
-                  <option value="other">Other</option>
+                  <option value="other">{t('eventForm.platformOther')}</option>
                 </select>
                 <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-gray-400">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -279,12 +281,12 @@ const EventForm = ({
             </div>
 
             <InputField
-              label="Meeting Link"
+              label={t('eventForm.meetingLinkLabel')}
               name="online_meeting_url"
               type="url"
               value={formData.online_meeting_url}
               onChange={handleChange}
-              placeholder="https://..."
+              placeholder={t('eventForm.meetingLinkPlaceholder')}
               required
             />
           </>
@@ -301,7 +303,7 @@ const EventForm = ({
                 className="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500 transition-all cursor-pointer"
               />
             </div>
-            <span className="text-sm font-bold text-gray-700 group-hover:text-gray-900 transition-colors">Requires Registration</span>
+            <span className="text-sm font-bold text-gray-700 group-hover:text-gray-900 transition-colors">{t('eventForm.reqReg')}</span>
           </label>
 
           <label className="flex items-center space-x-3 cursor-pointer group">
@@ -314,25 +316,25 @@ const EventForm = ({
                 className="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500 transition-all cursor-pointer"
               />
             </div>
-            <span className="text-sm font-bold text-gray-700 group-hover:text-gray-900 transition-colors">Free Entry</span>
+            <span className="text-sm font-bold text-gray-700 group-hover:text-gray-900 transition-colors">{t('eventForm.freeEntry')}</span>
           </label>
         </div>
 
         {!formData.is_free_entry && (
           <div className="md:col-span-2 mt-4 p-6 rounded-2xl bg-amber-50 border border-amber-100">
             <InputField
-              label="Ticket Price (RON)"
+              label={t('eventForm.ticketPriceLabel')}
               name="ticket_price"
               type="number"
               min="0.01"
               step="0.01"
               value={formData.ticket_price}
               onChange={handleChange}
-              placeholder="e.g. 50.00"
+              placeholder={t('eventForm.ticketPricePlaceholder')}
               required={!formData.is_free_entry}
             />
             <p className="mt-2 text-xs font-bold text-amber-700">
-              Required for paid events. Payment processing is not active yet.
+              {t('eventForm.ticketPriceNote')}
             </p>
           </div>
         )}
@@ -346,7 +348,7 @@ const EventForm = ({
             onClick={onCancel}
             className="px-8"
           >
-            Cancel
+            {t('eventForm.cancel')}
           </Button>
         )}
         <Button 
@@ -354,7 +356,7 @@ const EventForm = ({
           isLoading={isLoading} 
           className="w-full md:w-auto px-12 py-4 shadow-primary-100 shadow-xl"
         >
-          {buttonText}
+          {buttonText || t('eventForm.saveEvent')}
         </Button>
       </div>
     </form>

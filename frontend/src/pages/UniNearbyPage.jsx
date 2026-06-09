@@ -5,8 +5,11 @@ import Loader from '../components/Loader';
 import ErrorMessage from '../components/ErrorMessage';
 import { getNearbyEvents } from '../api/events';
 import { MapPin, Sparkles, LayoutGrid, List, Compass, Info } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
+import { localizeEvent } from '../utils/localizeEvent';
 
 const UniNearbyPage = () => {
+  const { language, t } = useLanguage();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -40,16 +43,15 @@ const UniNearbyPage = () => {
           <div className="relative z-10 text-center px-6 max-w-4xl mx-auto">
             <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-white text-xs font-bold uppercase tracking-wider mb-8 border border-white/30 shadow-sm">
               <Compass className="w-3.5 h-3.5 mr-2" />
-              Explore Beyond Campus
+              {t('nearby.beyondCampus')}
             </div>
 
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tighter leading-tight mb-6">
-              Uni Nearby
+              {t('nearby.title')}
             </h1>
 
             <p className="text-lg md:text-xl text-indigo-50 font-medium leading-relaxed opacity-90">
-              Discover student-friendly events and opportunities around Suceava.
-              Opportunities that matter for your growth and lifestyle.
+              {t('nearby.subtitle')}
             </p>
           </div>
         </div>
@@ -60,9 +62,9 @@ const UniNearbyPage = () => {
             <Info className="w-8 h-8" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-indigo-900 mb-1">Local Opportunities</h3>
+            <h3 className="text-lg font-bold text-indigo-900 mb-1">{t('nearby.localOpportunities')}</h3>
             <p className="text-indigo-700/80 leading-relaxed text-sm">
-              These opportunities are outside the university campus but are curated for students interested in culture, music, tech, volunteering, sport, and networking. They are provided by our city partners and local communities.
+              {t('nearby.description')}
             </p>
           </div>
         </div>
@@ -80,7 +82,7 @@ const UniNearbyPage = () => {
                 }`}
               >
                 <LayoutGrid className="w-4 h-4" />
-                Grid
+                {t('nearby.viewGrid')}
               </button>
               <button
                 onClick={() => setViewMode('list')}
@@ -91,7 +93,7 @@ const UniNearbyPage = () => {
                 }`}
               >
                 <List className="w-4 h-4" />
-                List
+                {t('nearby.viewList')}
               </button>
             </div>
           </div>
@@ -101,7 +103,7 @@ const UniNearbyPage = () => {
         {loading ? (
           <div className="py-24 text-center">
             <Loader size="lg" />
-            <p className="mt-4 text-gray-500 font-normal animate-pulse">Scanning the city for opportunities...</p>
+            <p className="mt-4 text-gray-500 font-normal animate-pulse">{t('nearby.scanning')}</p>
           </div>
         ) : error ? (
           <div className="max-w-2xl mx-auto">
@@ -112,14 +114,14 @@ const UniNearbyPage = () => {
             <div className="bg-gray-50 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Compass className="w-8 h-8 text-gray-300" />
             </div>
-            <p className="text-gray-400 font-bold text-lg">No nearby opportunities available right now. Check back soon!</p>
+            <p className="text-gray-400 font-bold text-lg">{t('nearby.noNearby')}</p>
           </div>
         ) : (
           <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8' : 'flex flex-col gap-6'}>
             {events.map((event) => (
               <EventCard 
                 key={event.id} 
-                event={event} 
+                event={localizeEvent(event, language)} 
                 isNearby={true} 
                 variant={viewMode === 'list' ? 'row' : 'card'} 
               />

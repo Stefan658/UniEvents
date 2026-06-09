@@ -7,6 +7,8 @@ import ErrorMessage from '../components/ErrorMessage';
 import Button from '../components/Button';
 import { getMyRegistrations, cancelRegistration, getMyBadges } from '../api/registrations';
 import { Calendar, MapPin, Clock, ExternalLink, XCircle, Bookmark, LayoutGrid, List, Trophy, Heart, Briefcase, Code, MessageSquare, Dumbbell, Award, Sparkles } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
+import { localizeEvent } from '../utils/localizeEvent';
 
 const ICON_MAP = {
   Trophy,
@@ -19,6 +21,7 @@ const ICON_MAP = {
 };
 
 const MyRegistrationsPage = () => {
+  const { language, t } = useLanguage();
   const [registrations, setRegistrations] = useState([]);
   const [badges, setBadges] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -50,21 +53,21 @@ const MyRegistrationsPage = () => {
   }, []);
 
   const handleCancel = async (regId) => {
-    if (!window.confirm('Are you sure you want to cancel this registration?')) return;
+    if (!window.confirm(t('registrations.cancelConfirm'))) return;
 
     setActionLoading(true);
     try {
       await cancelRegistration(regId);
       setRegistrations(registrations.filter(r => r.id !== regId));
     } catch (err) {
-      alert(err || 'Failed to cancel registration');
+      alert(err || t('registrations.cancelFailed'));
     } finally {
       setActionLoading(false);
     }
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString(undefined, { 
+    return new Date(dateString).toLocaleDateString(language === 'ro' ? 'ro-RO' : 'en-US', { 
       weekday: 'short',
       month: 'short', 
       day: 'numeric', 
@@ -73,7 +76,7 @@ const MyRegistrationsPage = () => {
   };
 
   const formatTime = (dateString) => {
-    return new Date(dateString).toLocaleTimeString(undefined, { 
+    return new Date(dateString).toLocaleTimeString(language === 'ro' ? 'ro-RO' : 'en-US', { 
       hour: '2-digit', 
       minute: '2-digit' 
     });
@@ -104,10 +107,10 @@ const MyRegistrationsPage = () => {
     <PageContainer>
       <div className="mb-12">
         <div className="inline-flex items-center px-3 py-1 rounded-lg bg-primary-50 text-primary-700 text-[10px] font-black uppercase tracking-widest mb-3 border border-primary-100">
-          Participant Portal
+          {t('registrations.portal')}
         </div>
-        <h1 className="text-4xl font-semibold font-black text-gray-900 tracking-tighter">My Registrations</h1>
-        <p className="text-gray-500 font-medium mt-2">Manage your upcoming event participations.</p>
+        <h1 className="text-4xl font-semibold font-black text-gray-900 tracking-tighter">{t('registrations.title')}</h1>
+        <p className="text-gray-500 font-medium mt-2">{t('registrations.subtitle')}</p>
       </div>
 
       {!loading && !error && registrations.length > 0 && (
@@ -122,7 +125,7 @@ const MyRegistrationsPage = () => {
               }`}
             >
               <LayoutGrid className="w-4 h-4" />
-              Cards
+              {t('registrations.viewCards')}
             </button>
             <button
               onClick={() => setViewMode('list')}
@@ -133,7 +136,7 @@ const MyRegistrationsPage = () => {
               }`}
             >
               <List className="w-4 h-4" />
-              List
+              {t('registrations.viewList')}
             </button>
           </div>
         </div>
@@ -148,12 +151,12 @@ const MyRegistrationsPage = () => {
           <div className="bg-gray-50 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6">
             <Bookmark className="w-10 h-10 text-gray-300" />
           </div>
-          <h3 className="text-2xl font-black text-gray-900 mb-2">No registrations found</h3>
+          <h3 className="text-2xl font-black text-gray-900 mb-2">{t('registrations.noRegistrations')}</h3>
           <p className="text-gray-500 font-medium mb-8 max-w-md mx-auto">
-            You haven't registered for any events yet. Explore our latest events and join the university community!
+            {t('registrations.noRegistrationsDesc')}
           </p>
           <Link to="/">
-            <Button className="shadow-primary-100 shadow-xl">Browse Events</Button>
+            <Button className="shadow-primary-100 shadow-xl">{t('registrations.browseEvents')}</Button>
           </Link>
         </div>
       ) : (
@@ -164,7 +167,7 @@ const MyRegistrationsPage = () => {
             <div>
               <h2 className="text-2xl font-black text-gray-900 mb-8 flex items-center">
                 <Award className="w-6 h-6 mr-3 text-yellow-500" />
-                Your Badges & Rewards
+                {t('registrations.badgesTitle')}
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {badges.map((badge) => {
@@ -184,7 +187,7 @@ const MyRegistrationsPage = () => {
                         </div>
                         <div className="text-right">
                           <span className={`text-xs font-black uppercase tracking-wider ${badge.earned ? 'text-amber-600' : 'text-gray-400'}`}>
-                            {badge.earned ? 'Earned' : 'Locked'}
+                            {badge.earned ? t('registrations.earned') : t('registrations.locked')}
                           </span>
                           <p className="text-xs font-bold text-gray-400 mt-1">
                             {badge.progress} / {badge.target}
@@ -230,7 +233,7 @@ const MyRegistrationsPage = () => {
           {waitlistedRegistrations.length > 0 && (
             <div>
               <h2 className="text-2xl font-black text-amber-600 mb-8 flex items-center">
-                Waitlisted Events
+                {t('registrations.waitlistedTitle')}
                 <span className="ml-4 px-3 py-1 rounded-full bg-amber-50 text-amber-600 text-xs font-black">
                   {waitlistedRegistrations.length}
                 </span>
@@ -245,6 +248,8 @@ const MyRegistrationsPage = () => {
                     variant={viewMode === 'list' ? 'row' : 'card'} 
                     isWaitlisted 
                     isNearby={reg.organizer_email?.startsWith('nearby.')}
+                    language={language}
+                    t={t}
                   />
                 ))}
               </div>
@@ -255,7 +260,7 @@ const MyRegistrationsPage = () => {
           {activeRegistrations.length > 0 && (
             <div>
               <h2 className="text-2xl font-black text-gray-900 mb-8 flex items-center">
-                Upcoming Participations
+                {t('registrations.upcomingTitle')}
                 <span className="ml-4 px-3 py-1 rounded-full bg-primary-50 text-primary-600 text-xs font-black">
                   {activeRegistrations.length}
                 </span>
@@ -269,6 +274,8 @@ const MyRegistrationsPage = () => {
                     actionLoading={actionLoading} 
                     variant={viewMode === 'list' ? 'row' : 'card'} 
                     isNearby={reg.organizer_email?.startsWith('nearby.')}
+                    language={language}
+                    t={t}
                   />
                 ))}
               </div>
@@ -279,7 +286,7 @@ const MyRegistrationsPage = () => {
           {cancelledRegistrations.length > 0 && (
             <div>
               <h2 className="text-2xl font-black text-red-600 mb-8 flex items-center">
-                Cancelled Events
+                {t('registrations.cancelledTitle')}
                 <span className="ml-4 px-3 py-1 rounded-full bg-red-50 text-red-600 text-xs font-black">
                   {cancelledRegistrations.length}
                 </span>
@@ -292,6 +299,8 @@ const MyRegistrationsPage = () => {
                     isCancelled 
                     variant={viewMode === 'list' ? 'row' : 'card'} 
                     isNearby={reg.organizer_email?.startsWith('nearby.')}
+                    language={language}
+                    t={t}
                   />
                 ))}
               </div>
@@ -302,7 +311,7 @@ const MyRegistrationsPage = () => {
           {pastRegistrations.length > 0 && (
             <div className="opacity-75 grayscale-[30%] hover:opacity-100 hover:grayscale-0 transition-all duration-500">
               <h2 className="text-2xl font-black text-gray-400 mb-8 flex items-center">
-                Past Events
+                {t('registrations.pastTitle')}
                 <span className="ml-4 px-3 py-1 rounded-full bg-gray-100 text-gray-400 text-xs font-black">
                   {pastRegistrations.length}
                 </span>
@@ -315,6 +324,8 @@ const MyRegistrationsPage = () => {
                     isPast 
                     variant={viewMode === 'list' ? 'row' : 'card'} 
                     isNearby={reg.organizer_email?.startsWith('nearby.')}
+                    language={language}
+                    t={t}
                   />
                 ))}
               </div>
@@ -326,11 +337,18 @@ const MyRegistrationsPage = () => {
   );
 };
 
-const RegistrationCard = ({ reg, onCancel, actionLoading, isCancelled, isPast, isWaitlisted, isNearby, variant = 'card' }) => {
+const RegistrationCard = ({ reg, onCancel, actionLoading, isCancelled, isPast, isWaitlisted, isNearby, variant = 'card', language, t }) => {
   const isRow = variant === 'row';
 
+  // Use localizeEvent for rendering
+  const displayEvent = localizeEvent({
+    title: reg.event_title,
+    description: reg.event_description, // assuming these are in the reg object
+    category_name: reg.event_category_name
+  }, language);
+
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString(undefined, { 
+    return new Date(dateString).toLocaleDateString(language === 'ro' ? 'ro-RO' : 'en-US', { 
       weekday: 'short',
       month: 'short', 
       day: 'numeric', 
@@ -339,7 +357,7 @@ const RegistrationCard = ({ reg, onCancel, actionLoading, isCancelled, isPast, i
   };
 
   const formatTime = (dateString) => {
-    return new Date(dateString).toLocaleTimeString(undefined, { 
+    return new Date(dateString).toLocaleTimeString(language === 'ro' ? 'ro-RO' : 'en-US', { 
       hour: '2-digit', 
       minute: '2-digit' 
     });
@@ -371,12 +389,12 @@ const RegistrationCard = ({ reg, onCancel, actionLoading, isCancelled, isPast, i
                     ? 'bg-gray-100 text-gray-600 border-gray-200' 
                     : 'bg-green-50 text-green-700 border-green-100'
             }`}>
-              {isCancelled ? 'EVENT CANCELLED' : isWaitlisted ? 'WAITLISTED' : reg.status === 'confirmed' ? 'Confirmed' : reg.status}
+              {isCancelled ? t('registrations.eventCancelled') : isWaitlisted ? t('registrations.waitlisted') : reg.status === 'confirmed' ? t('registrations.confirmed') : reg.status}
             </span>
             {isNearby && (
               <span className="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-indigo-100 text-indigo-700 border border-indigo-200/50">
                 <MapPin className="w-3 h-3 mr-1 inline-block -translate-y-px" />
-                Outside Campus
+                {t('eventCard.outsideCampus')}
               </span>
             )}
             <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
@@ -384,12 +402,12 @@ const RegistrationCard = ({ reg, onCancel, actionLoading, isCancelled, isPast, i
                 ? 'bg-blue-50 text-blue-700 border-blue-100' 
                 : 'bg-amber-50 text-amber-700 border-amber-100'
             }`}>
-              {reg.is_free_entry ? 'Free' : reg.ticket_price ? `${formatPrice(reg.ticket_price)} RON` : 'Paid'}
+              {reg.is_free_entry ? t('eventCard.free') : reg.ticket_price ? `${formatPrice(reg.ticket_price)} RON` : t('eventCard.paid')}
             </span>
           </div>
           {!isRow && (
             <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-              Registered on {new Date(reg.registered_at).toLocaleDateString()}
+              {t('registrations.registeredOn')} {new Date(reg.registered_at).toLocaleDateString(language === 'ro' ? 'ro-RO' : 'en-US')}
             </p>
           )}
         </div>
@@ -398,7 +416,7 @@ const RegistrationCard = ({ reg, onCancel, actionLoading, isCancelled, isPast, i
           <h3 className={`text-xl font-semibold font-black transition-colors ${isRow ? 'mb-2' : 'mb-4'} leading-tight ${
             isCancelled ? 'text-gray-500' : 'text-gray-900 group-hover:text-primary-600'
           }`}>
-            {reg.event_title}
+            {displayEvent.title}
           </h3>
           
           <div className={`${isRow ? 'flex flex-wrap gap-x-6 gap-y-2' : 'space-y-3 mb-6'}`}>
@@ -412,11 +430,11 @@ const RegistrationCard = ({ reg, onCancel, actionLoading, isCancelled, isPast, i
             </div>
             <div className="flex items-center text-sm font-bold text-gray-600">
               <MapPin className="w-4 h-4 mr-3 text-gray-400" />
-              {reg.event_location} ({reg.event_participation_type})
+              {reg.event_location} ({t('home.' + reg.event_participation_type)})
             </div>
             {isRow && (
               <div className="flex items-center text-[10px] font-black uppercase tracking-widest text-gray-400">
-                Registered: {new Date(reg.registered_at).toLocaleDateString()}
+                {t('registrations.registeredOn')}: {new Date(reg.registered_at).toLocaleDateString(language === 'ro' ? 'ro-RO' : 'en-US')}
               </div>
             )}
           </div>
@@ -428,7 +446,7 @@ const RegistrationCard = ({ reg, onCancel, actionLoading, isCancelled, isPast, i
           <Link to={`/events/${reg.event_id}`} className={isRow ? "" : "flex-grow"}>
             <Button variant={isCancelled ? "ghost" : "secondary"} className={`${isRow ? "px-6" : "w-full"} !py-2.5 text-xs whitespace-nowrap`}>
               <ExternalLink className="w-3.5 h-3.5 mr-2" />
-              View Details
+              {t('registrations.viewDetails')}
             </Button>
           </Link>
         )}
@@ -436,7 +454,7 @@ const RegistrationCard = ({ reg, onCancel, actionLoading, isCancelled, isPast, i
         {isPast && !isCancelled && (
           <Link to={`/events/${reg.event_id}#feedback`} className={isRow ? "" : "flex-grow"}>
             <Button variant="primary" className={`${isRow ? "px-6" : "w-full"} !py-2.5 text-xs whitespace-nowrap`}>
-              {reg.has_feedback ? "See Your Feedback" : "Leave Feedback"}
+              {reg.has_feedback ? t('registrations.seeYourFeedback') : t('registrations.leaveFeedback')}
             </Button>
           </Link>
         )}
@@ -446,7 +464,7 @@ const RegistrationCard = ({ reg, onCancel, actionLoading, isCancelled, isPast, i
             onClick={() => onCancel(reg.id)}
             disabled={actionLoading}
             className="p-2.5 rounded-xl border border-gray-100 text-gray-400 hover:text-red-600 hover:bg-red-50 hover:border-red-100 transition-all shrink-0"
-            title="Cancel Registration"
+            title={t('registrations.cancelTooltip')}
           >
             <XCircle className="w-5 h-5" />
           </button>

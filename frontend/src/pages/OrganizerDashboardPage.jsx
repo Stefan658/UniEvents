@@ -9,11 +9,14 @@ import { getAllEvents, deleteEvent } from '../api/events';
 import { getEventRegistrations } from '../api/registrations';
 import { getEventFeedbackSummary } from '../api/feedback';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
+import { localizeEvent } from '../utils/localizeEvent';
 import { Plus, Edit2, Trash2, Calendar, MapPin, Users, ExternalLink, Star, RefreshCcw } from 'lucide-react';
 
 const OrganizerDashboardPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { language, t } = useLanguage();
   const [events, setEvents] = useState([]);
   const [participantCounts, setParticipantCounts] = useState({});
   const [feedbackSummaries, setFeedbackSummaries] = useState({});
@@ -58,7 +61,7 @@ const OrganizerDashboardPage = () => {
   }, [user?.id]);
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this event?')) {
+    if (window.confirm(t('organizer.deleteConfirm'))) {
       try {
         await deleteEvent(id);
         setEvents(events.filter(event => event.id !== id));
@@ -74,7 +77,7 @@ const OrganizerDashboardPage = () => {
           return next;
         });
       } catch (err) {
-        alert('Failed to delete event: ' + err);
+        alert(t('organizer.deleteFailed') + err);
       }
     }
   };
@@ -93,10 +96,10 @@ const OrganizerDashboardPage = () => {
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'Date TBD';
+    if (!dateString) return t('organizer.dateTbd');
     const date = new Date(dateString);
-    if (isNaN(date.getTime())) return 'Invalid Date';
-    return date.toLocaleDateString(undefined, { 
+    if (isNaN(date.getTime())) return t('organizer.invalidDate');
+    return date.toLocaleDateString(language === 'ro' ? 'ro-RO' : 'en-US', { 
       month: 'short', 
       day: 'numeric', 
       year: 'numeric' 
@@ -104,23 +107,24 @@ const OrganizerDashboardPage = () => {
   };
 
   const formatDashboardDateRange = (start, end) => {
-    if (!start) return 'Date TBD';
+    if (!start) return t('organizer.dateTbd');
     if (!end || isSameDay(start, end)) return formatDate(start);
     
     const d1 = new Date(start);
     const d2 = new Date(end);
     
-    if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return 'Invalid Date Range';
+    if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return t('organizer.invalidDateRange');
 
+    const locale = language === 'ro' ? 'ro-RO' : 'en-US';
     const options = { month: 'short', day: 'numeric' };
     const optionsWithYear = { year: 'numeric', month: 'short', day: 'numeric' };
 
     // If same year
     if (d1.getFullYear() === d2.getFullYear()) {
-      return `${d1.toLocaleDateString(undefined, options)} - ${d2.toLocaleDateString(undefined, optionsWithYear)}`;
+      return `${d1.toLocaleDateString(locale, options)} - ${d2.toLocaleDateString(locale, optionsWithYear)}`;
     }
     
-    return `${d1.toLocaleDateString(undefined, optionsWithYear)} - ${d2.toLocaleDateString(undefined, optionsWithYear)}`;
+    return `${d1.toLocaleDateString(locale, optionsWithYear)} - ${d2.toLocaleDateString(locale, optionsWithYear)}`;
   };
 
   // Summary statistics calculations
@@ -154,90 +158,93 @@ const OrganizerDashboardPage = () => {
       <table className="w-full">
         <thead>
           <tr className="bg-gray-50/50 text-left border-b border-gray-50">
-            <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400">Event Details</th>
-            <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400">Status</th>
-            <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400 text-center">Participants</th>
-            {isPast && <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400 text-center">Feedback</th>}
-            <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400 text-right">Actions</th>
+            <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400">{t('organizer.eventDetails')}</th>
+            <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400">{t('organizer.status')}</th>
+            <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400 text-center">{t('organizer.participants')}</th>
+            {isPast && <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400 text-center">{t('organizer.feedback')}</th>}
+            <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400 text-right">{t('organizer.actions')}</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-50">
-          {eventsList.map((event) => (
-            <tr key={event.id} className="hover:bg-gray-50/30 transition-colors group">
-              <td className="px-8 py-5">
-                <div className="flex items-center">
-                  <div>
-                    <Link 
-                      to={`/events/${event.id}`}
-                      className="font-bold text-gray-900 hover:text-primary-600 hover:underline transition-colors block w-fit"
-                    >
-                      {event.title}
-                    </Link>
-                    <div className="flex items-center text-[10px] font-black uppercase tracking-widest text-gray-400 mt-1">
-                      {event.category_name} • {formatDashboardDateRange(event.start_at, event.end_at)}
+          {eventsList.map((event) => {
+            const displayEvent = localizeEvent(event, language);
+            return (
+              <tr key={event.id} className="hover:bg-gray-50/30 transition-colors group">
+                <td className="px-8 py-5">
+                  <div className="flex items-center">
+                    <div>
+                      <Link 
+                        to={`/events/${event.id}`}
+                        className="font-bold text-gray-900 hover:text-primary-600 hover:underline transition-colors block w-fit"
+                      >
+                        {displayEvent.title}
+                      </Link>
+                      <div className="flex items-center text-[10px] font-black uppercase tracking-widest text-gray-400 mt-1">
+                        {t(`cat.${event.category_name}`, displayEvent.category_name)} • {formatDashboardDateRange(event.start_at, event.end_at)}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </td>
-              <td className="px-8 py-5">
-                <span className={`px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border ${
-                  event.status === 'published' || event.status === 'active' ? 'bg-green-50 text-green-700 border-green-100' :
-                  event.status === 'pending' ? 'bg-yellow-50 text-yellow-700 border-yellow-100' :
-                  event.status === 'rejected' || event.status === 'cancelled' ? 'bg-red-50 text-red-700 border-red-100' :
-                  'bg-gray-50 text-gray-700 border-gray-100'
-                }`}>
-                  {event.status}
-                </span>
-              </td>
-              <td className="px-8 py-5 text-center">
-                <div className="flex flex-col items-center">
-                  <span className="text-sm font-bold text-gray-900">{participantCounts[event.id] || 0}</span>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Registered</span>
-                </div>
-              </td>
-              {isPast && (
-                <td className="px-8 py-5 text-center">
-                  {feedbackSummaries[event.id] && feedbackSummaries[event.id].total_feedbacks > 0 ? (
-                    <div className="flex flex-col items-center">
-                      <div className="flex items-center space-x-1">
-                        <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-                        <span className="text-sm font-bold text-gray-900">{feedbackSummaries[event.id].average_rating}</span>
-                      </div>
-                      <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">{feedbackSummaries[event.id].total_feedbacks} reviews</span>
-                    </div>
-                  ) : (
-                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-300">No feedback</span>
-                  )}
                 </td>
-              )}
-              <td className="px-8 py-5 text-right">
-                <div className="flex items-center justify-end space-x-2">
-                  {!isPast ? (
-                    <>
-                      <Link to={`/organizer/events/${event.id}/edit`} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all" title="Edit Event">
-                        <Edit2 className="w-5 h-5" />
-                      </Link>
+                <td className="px-8 py-5">
+                  <span className={`px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border ${
+                    event.status === 'published' || event.status === 'active' ? 'bg-green-50 text-green-700 border-green-100' :
+                    event.status === 'pending' ? 'bg-yellow-50 text-yellow-700 border-yellow-100' :
+                    event.status === 'rejected' || event.status === 'cancelled' ? 'bg-red-50 text-red-700 border-red-100' :
+                    'bg-gray-50 text-gray-700 border-gray-100'
+                  }`}>
+                    {t(`status.${event.status}`, event.status)}
+                  </span>
+                </td>
+                <td className="px-8 py-5 text-center">
+                  <div className="flex flex-col items-center">
+                    <span className="text-sm font-bold text-gray-900">{participantCounts[event.id] || 0}</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">{t('organizer.registered')}</span>
+                  </div>
+                </td>
+                {isPast && (
+                  <td className="px-8 py-5 text-center">
+                    {feedbackSummaries[event.id] && feedbackSummaries[event.id].total_feedbacks > 0 ? (
+                      <div className="flex flex-col items-center">
+                        <div className="flex items-center space-x-1">
+                          <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                          <span className="text-sm font-bold text-gray-900">{feedbackSummaries[event.id].average_rating}</span>
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">{feedbackSummaries[event.id].total_feedbacks} {t('organizer.reviews')}</span>
+                      </div>
+                    ) : (
+                      <span className="text-[10px] font-black uppercase tracking-widest text-gray-300">{t('organizer.noFeedback')}</span>
+                    )}
+                  </td>
+                )}
+                <td className="px-8 py-5 text-right">
+                  <div className="flex items-center justify-end space-x-2">
+                    {!isPast ? (
+                      <>
+                        <Link to={`/organizer/events/${event.id}/edit`} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all" title={t('organizer.editTooltip')}>
+                          <Edit2 className="w-5 h-5" />
+                        </Link>
+                        <button 
+                          onClick={() => handleDelete(event.id)}
+                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                          title={t('organizer.deleteTooltip')}
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </>
+                    ) : (
                       <button 
-                        onClick={() => handleDelete(event.id)}
-                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
-                        title="Delete Event"
+                        onClick={() => handleRetake(event)}
+                        className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all"
+                        title={t('organizer.retakeTooltip')}
                       >
-                        <Trash2 className="w-5 h-5" />
+                        <RefreshCcw className="w-5 h-5" />
                       </button>
-                    </>
-                  ) : (
-                    <button 
-                      onClick={() => handleRetake(event)}
-                      className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all"
-                      title="Schedule Again"
-                    >
-                      <RefreshCcw className="w-5 h-5" />
-                    </button>
-                  )}
-                </div>
-              </td>
-            </tr>
-          ))}
+                    )}
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -257,32 +264,32 @@ const OrganizerDashboardPage = () => {
       <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
         <div>
           <div className="inline-flex items-center px-3 py-1 rounded-lg bg-primary-50 text-primary-700 text-[10px] font-black uppercase tracking-widest mb-3 border border-primary-100">
-            Management Portal
+            {t('organizer.portal')}
           </div>
-          <h1 className="text-4xl font-semibold font-black text-gray-900 tracking-tighter">Organizer Dashboard</h1>
-          <p className="text-gray-500 font-medium mt-2">Manage your events and track participation.</p>
+          <h1 className="text-4xl font-semibold font-black text-gray-900 tracking-tighter">{t('organizer.title')}</h1>
+          <p className="text-gray-500 font-medium mt-2">{t('organizer.subtitle')}</p>
         </div>
         <Link to="/organizer/events/new">
           <Button className="shadow-primary-200 shadow-xl !py-3 !px-6">
             <Plus className="w-5 h-5 mr-2" />
-            Create New Event
+            {t('organizer.createEvent')}
           </Button>
         </Link>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
         <div className="bg-white p-8 rounded-[2rem] shadow-soft border border-gray-100/50">
-          <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-2">Total Events</p>
+          <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-2">{t('organizer.totalEvents')}</p>
           <p className="text-4xl font-black text-gray-900 tracking-tighter">{totalEvents}</p>
         </div>
         <div className="bg-white p-8 rounded-[2rem] shadow-soft border border-gray-100/50">
-          <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-2">Active Registrations</p>
+          <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-2">{t('organizer.activeRegs')}</p>
           <p className="text-4xl font-black text-gray-900 tracking-tighter">
             {activeRegistrations}
           </p>
         </div>
         <div className="bg-white p-8 rounded-[2rem] shadow-soft border border-gray-100/50">
-          <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-2">Avg Platform Rating</p>
+          <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-2">{t('organizer.avgRating')}</p>
           <div className="flex items-center">
             <p className="text-4xl font-black text-primary-600 tracking-tighter mr-3">{avgRating}</p>
             <div className="flex">
@@ -296,7 +303,7 @@ const OrganizerDashboardPage = () => {
           </div>
         </div>
         <div className="bg-white p-8 rounded-[2rem] shadow-soft border border-gray-100/50">
-          <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-2">Capacity Usage</p>
+          <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-2">{t('organizer.capacityUsage')}</p>
           <div className="flex items-center">
             <p className="text-4xl font-black text-gray-900 tracking-tighter mr-3">{capacityUsage}%</p>
             <Users className="w-5 h-5 text-gray-300" />
@@ -304,7 +311,7 @@ const OrganizerDashboardPage = () => {
         </div>
       </div>
 
-      <SectionCard title="Upcoming & Active Events" className="!p-0 mb-12">
+      <SectionCard title={t('organizer.upcomingEvents')} className="!p-0 mb-12">
         {loading ? (
           <div className="p-12"><Loader /></div>
         ) : error ? (
@@ -314,9 +321,9 @@ const OrganizerDashboardPage = () => {
             <div className="bg-gray-50 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Calendar className="w-8 h-8 text-gray-300" />
             </div>
-            <p className="text-gray-400 font-bold text-lg">No upcoming events scheduled.</p>
+            <p className="text-gray-400 font-bold text-lg">{t('organizer.noUpcoming')}</p>
             <Link to="/organizer/events/new" className="text-primary-600 font-black mt-2 inline-block hover:underline">
-              Create one now
+              {t('organizer.createOneNow')}
             </Link>
           </div>
         ) : (
@@ -324,14 +331,14 @@ const OrganizerDashboardPage = () => {
         )}
       </SectionCard>
 
-      <SectionCard title="Past Events" className="!p-0">
+      <SectionCard title={t('organizer.pastEvents')} className="!p-0">
         {loading ? (
           <div className="p-12"><Loader /></div>
         ) : error ? (
           <div className="p-8"><ErrorMessage message={error} /></div>
         ) : pastEvents.length === 0 ? (
           <div className="text-center py-12 px-8">
-            <p className="text-gray-300 font-bold">No past events to display.</p>
+            <p className="text-gray-300 font-bold">{t('organizer.noPast')}</p>
           </div>
         ) : (
           renderEventsTable(pastEvents, true)

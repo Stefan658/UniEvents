@@ -8,11 +8,13 @@ import ParticipantList from '../components/ParticipantList';
 import MaterialManager from '../components/MaterialManager';
 import Loader from '../components/Loader';
 import ErrorMessage from '../components/ErrorMessage';
+import { useLanguage } from '../contexts/LanguageContext';
 import { ArrowLeft, Settings, Users, FileText } from 'lucide-react';
 
 const EditEventPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -37,7 +39,7 @@ const EditEventPage = () => {
     setIsUpdating(true);
     try {
       await updateEvent(id, formData);
-      alert('Event updated successfully!');
+      alert(t('organizer.updateSuccess'));
       navigate('/organizer');
     } catch (err) {
       alert(err);
@@ -56,7 +58,7 @@ const EditEventPage = () => {
         className="inline-flex items-center text-gray-500 hover:text-primary-600 mb-8 font-medium group transition-colors"
       >
         <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" /> 
-        Back to Dashboard
+        {t('organizer.backToDash')}
       </button>
 
       <div className="flex flex-col lg:flex-row gap-8">
@@ -68,7 +70,7 @@ const EditEventPage = () => {
               activeTab === 'details' ? 'bg-primary-600 text-white shadow-lg shadow-primary-200' : 'text-gray-500 hover:bg-gray-50'
             }`}
           >
-            <Settings className="w-5 h-5 mr-3" /> Event Details
+            <Settings className="w-5 h-5 mr-3" /> {t('organizer.tabDetails')}
           </button>
           <button
             onClick={() => setActiveTab('participants')}
@@ -76,7 +78,7 @@ const EditEventPage = () => {
               activeTab === 'participants' ? 'bg-primary-600 text-white shadow-lg shadow-primary-200' : 'text-gray-500 hover:bg-gray-50'
             }`}
           >
-            <Users className="w-5 h-5 mr-3" /> Participants
+            <Users className="w-5 h-5 mr-3" /> {t('organizer.tabParticipants')}
           </button>
           <button
             onClick={() => setActiveTab('materials')}
@@ -84,14 +86,14 @@ const EditEventPage = () => {
               activeTab === 'materials' ? 'bg-primary-600 text-white shadow-lg shadow-primary-200' : 'text-gray-500 hover:bg-gray-50'
             }`}
           >
-            <FileText className="w-5 h-5 mr-3" /> Materials
+            <FileText className="w-5 h-5 mr-3" /> {t('organizer.tabMaterials')}
           </button>
         </div>
 
         {/* Content Area */}
         <div className="lg:w-3/4">
           {activeTab === 'details' && (
-            <SectionCard title="Edit Event Details">
+            <SectionCard title={t('organizer.editEvent')}>
               <EventForm 
                 initialData={event} 
                 onSubmit={handleSubmit} 
@@ -102,13 +104,13 @@ const EditEventPage = () => {
           )}
 
           {activeTab === 'participants' && (
-            <SectionCard title="Event Participants">
+            <SectionCard title={t('organizer.participants')}>
               <ParticipantList eventId={id} />
             </SectionCard>
           )}
 
           {activeTab === 'materials' && (
-            <SectionCard title="Manage Event Materials">
+            <SectionCard title={t('organizer.manageMaterials')}>
               <MaterialManager eventId={id} />
             </SectionCard>
           )}

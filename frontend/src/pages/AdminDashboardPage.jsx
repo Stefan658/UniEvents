@@ -7,6 +7,8 @@ import Button from '../components/Button';
 import { getAllEvents, updateEventStatus } from '../api/events';
 import { getOrganizers } from '../api/users';
 import { getEventRegistrations } from '../api/registrations';
+import { useLanguage } from '../contexts/LanguageContext';
+import { localizeEvent } from '../utils/localizeEvent';
 import { 
   Calendar, 
   Users, 
@@ -22,6 +24,7 @@ import {
 import { Link } from 'react-router-dom';
 
 const AdminDashboardPage = () => {
+  const { language, t } = useLanguage();
   const [events, setEvents] = useState([]);
   const [organizers, setOrganizers] = useState([]);
   const [participantCounts, setParticipantCounts] = useState({});
@@ -64,7 +67,9 @@ const AdminDashboardPage = () => {
   }, []);
 
   const handleStatusUpdate = async (id, status) => {
-    if (!window.confirm(`Are you sure you want to set this event to ${status}?`)) return;
+    // Keep internal status names logic but visually translate if needed
+    const translatedStatus = t(`status.${status}`, status);
+    if (!window.confirm(t('admin.confirmStatus').replace('{status}', translatedStatus))) return;
     
     setActionLoading(true);
     try {
@@ -72,7 +77,7 @@ const AdminDashboardPage = () => {
       // Refresh data
       await fetchAdminData();
     } catch (err) {
-      alert('Failed to update status: ' + err);
+      alert(t('admin.statusFailed') + err);
     } finally {
       setActionLoading(false);
     }
@@ -122,10 +127,11 @@ const AdminDashboardPage = () => {
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'TBD';
+    if (!dateString) return t('admin.dateTbd');
     const date = new Date(dateString);
-    if (isNaN(date.getTime())) return 'Invalid Date';
-    return date.toLocaleDateString(undefined, { 
+    if (isNaN(date.getTime())) return t('admin.invalidDate');
+    const locale = language === 'ro' ? 'ro-RO' : 'en-US';
+    return date.toLocaleDateString(locale, { 
       month: 'short', 
       day: 'numeric', 
       year: 'numeric',
@@ -135,18 +141,21 @@ const AdminDashboardPage = () => {
   };
 
   const formatDashboardDateRange = (start, end) => {
-    if (!start) return 'TBD';
+    if (!start) return t('admin.dateTbd');
     const date1 = new Date(start);
-    if (isNaN(date1.getTime())) return 'Invalid Date';
+    if (isNaN(date1.getTime())) return t('admin.invalidDate');
+
+    const locale = language === 'ro' ? 'ro-RO' : 'en-US';
 
     if (!end || isSameDay(start, end)) {
-      return formatDate(start) + (end ? ` - ${new Date(end).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}` : '');
+      return date1.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' }) + 
+             (end ? ` - ${new Date(end).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}` : '');
     }
     
     const date2 = new Date(end);
-    if (isNaN(date2.getTime())) return 'Invalid Date Range';
+    if (isNaN(date2.getTime())) return t('admin.invalidDateRange');
 
-    return `${formatDate(start)} - ${formatDate(end)}`;
+    return `${date1.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' })} - ${date2.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' })}`;
   };
 
   const filteredEvents = events.filter(event => {
@@ -165,10 +174,10 @@ const AdminDashboardPage = () => {
       <div className="mb-12">
         <div className="inline-flex items-center px-3 py-1 rounded-lg bg-primary-50 text-primary-700 text-[10px] font-black uppercase tracking-widest mb-3 border border-primary-100">
           <Shield className="w-3 h-3 mr-2" />
-          System Administration
+          {t('admin.portal')}
         </div>
-        <h1 className="text-4xl font-semibold font-black text-gray-900 tracking-tighter">Admin Panel</h1>
-        <p className="text-gray-500 font-medium mt-2">Manage event approvals and platform integrity.</p>
+        <h1 className="text-4xl font-semibold font-black text-gray-900 tracking-tighter">{t('admin.title')}</h1>
+        <p className="text-gray-500 font-medium mt-2">{t('admin.subtitle')}</p>
       </div>
 
       {/* Overview Cards */}
@@ -177,21 +186,21 @@ const AdminDashboardPage = () => {
           <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
             <Calendar className="w-32 h-32" />
           </div>
-          <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-2">Total Events</p>
+          <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-2">{t('admin.totalEvents')}</p>
           <p className="text-4xl font-black text-gray-900 tracking-tighter">{totalEvents}</p>
         </div>
         <div className="bg-white p-8 rounded-[2rem] shadow-soft border border-gray-100/50 relative overflow-hidden group">
           <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
             <UserCheck className="w-32 h-32" />
           </div>
-          <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-2">Total Organizers</p>
+          <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-2">{t('admin.totalOrganizers')}</p>
           <p className="text-4xl font-black text-gray-900 tracking-tighter">{totalOrganizers}</p>
         </div>
         <div className="bg-white p-8 rounded-[2rem] shadow-soft border border-gray-100/50 relative overflow-hidden group">
           <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
             <Users className="w-32 h-32" />
           </div>
-          <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-2">Total Registrations</p>
+          <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-2">{t('admin.totalRegistrations')}</p>
           <p className="text-4xl font-black text-primary-600 tracking-tighter">{totalRegistrations}</p>
         </div>
       </div>
@@ -200,29 +209,32 @@ const AdminDashboardPage = () => {
         {/* Events Moderation Section */}
         <SectionCard className="!p-0 overflow-hidden">
           <div className="bg-gray-50/50 border-b border-gray-100 px-8 py-4 flex flex-wrap gap-4 items-center justify-between">
-            <h2 className="text-xl font-semibold font-black text-gray-900 tracking-tight">Event Moderation</h2>
+            <h2 className="text-xl font-semibold font-black text-gray-900 tracking-tight">{t('admin.eventModeration')}</h2>
             <div className="flex bg-white p-1 rounded-xl border border-gray-200">
-              {['pending', 'published', 'rejected', 'cancelled'].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
-                    activeTab === tab 
-                      ? 'bg-primary-600 text-white shadow-md shadow-primary-200' 
-                      : 'text-gray-400 hover:text-primary-600'
-                  }`}
-                >
-                  {tab}
-                  <span className={`ml-2 px-1.5 py-0.5 rounded-md text-[10px] ${
-                    activeTab === tab ? 'bg-white/20' : 'bg-gray-100'
-                  }`}>
-                    {events.filter(e => {
-                      if (tab === 'published') return e.status === 'published' || e.status === 'active';
-                      return e.status === tab;
-                    }).length}
-                  </span>
-                </button>
-              ))}
+              {['pending', 'published', 'rejected', 'cancelled'].map((tab) => {
+                const tabTitle = t(`admin.tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
+                      activeTab === tab 
+                        ? 'bg-primary-600 text-white shadow-md shadow-primary-200' 
+                        : 'text-gray-400 hover:text-primary-600'
+                    }`}
+                  >
+                    {tabTitle}
+                    <span className={`ml-2 px-1.5 py-0.5 rounded-md text-[10px] ${
+                      activeTab === tab ? 'bg-white/20' : 'bg-gray-100'
+                    }`}>
+                      {events.filter(e => {
+                        if (tab === 'published') return e.status === 'published' || e.status === 'active';
+                        return e.status === tab;
+                      }).length}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -231,22 +243,23 @@ const AdminDashboardPage = () => {
               <div className="bg-gray-50 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 text-gray-300">
                 <CheckCircle className="w-8 h-8" />
               </div>
-              <p className="text-gray-400 font-bold">No {activeTab} events found</p>
+              <p className="text-gray-400 font-bold">{t('admin.noEventsFound').replace('{tab}', t(`admin.tab${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`))}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="bg-gray-50/20 text-left border-b border-gray-50">
-                    <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400">Event & Organizer</th>
-                    <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400">Date & Location</th>
-                    <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400">Moderation Notes</th>
-                    <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400 text-right">Actions</th>
+                    <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400">{t('admin.colEventOrg')}</th>
+                    <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400">{t('admin.colDateLoc')}</th>
+                    <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400">{t('admin.colNotes')}</th>
+                    <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400 text-right">{t('admin.colActions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {filteredEvents.map((event) => {
                     const conflicts = checkConflicts(event);
+                    const displayEvent = localizeEvent(event, language);
                     return (
                       <tr key={event.id} className="hover:bg-gray-50/30 transition-colors">
                         <td className="px-8 py-6">
@@ -256,9 +269,9 @@ const AdminDashboardPage = () => {
                               target="_blank"
                               className="font-bold text-gray-900 mb-1 hover:text-primary-600 hover:underline transition-colors block w-fit"
                             >
-                              {event.title}
+                              {displayEvent.title}
                             </Link>
-                            <p className="text-xs font-bold text-primary-600">by {event.organizer_full_name}</p>
+                            <p className="text-xs font-bold text-primary-600">{t('admin.by')} {event.organizer_full_name}</p>
                           </div>
                         </td>
                         <td className="px-8 py-6">
@@ -277,12 +290,13 @@ const AdminDashboardPage = () => {
                           {(() => {
                             const { warning, blocking } = checkConflicts(event);
                             if (blocking.length > 0) {
+                              const blockingEvent = localizeEvent(blocking[0], language);
                               return (
                                 <div className="flex items-start bg-red-50 text-red-700 p-3 rounded-xl border border-red-100 max-w-xs">
                                   <XCircle className="w-4 h-4 mr-2 shrink-0 mt-0.5" />
                                   <div>
-                                    <p className="text-[10px] font-black uppercase tracking-widest leading-none mb-1">Blocking Conflict</p>
-                                    <p className="text-[10px] font-medium leading-tight">Cannot approve: overlaps with published event '{blocking[0].title}'.</p>
+                                    <p className="text-[10px] font-black uppercase tracking-widest leading-none mb-1">{t('admin.blockingConflict')}</p>
+                                    <p className="text-[10px] font-medium leading-tight">{t('admin.blockingDesc')} '{blockingEvent.title}'.</p>
                                   </div>
                                 </div>
                               );
@@ -292,13 +306,13 @@ const AdminDashboardPage = () => {
                                 <div className="flex items-start bg-amber-50 text-amber-700 p-3 rounded-xl border border-amber-100 max-w-xs">
                                   <AlertTriangle className="w-4 h-4 mr-2 shrink-0 mt-0.5" />
                                   <div>
-                                    <p className="text-[10px] font-black uppercase tracking-widest leading-none mb-1">Scheduling Warning</p>
-                                    <p className="text-[10px] font-medium leading-tight">Overlaps with {warning.length} other pending event(s).</p>
+                                    <p className="text-[10px] font-black uppercase tracking-widest leading-none mb-1">{t('admin.warningConflict')}</p>
+                                    <p className="text-[10px] font-medium leading-tight">{t('admin.warningDesc').replace('{count}', warning.length)}</p>
                                   </div>
                                 </div>
                               );
                             }
-                            return <span className="text-[10px] font-black uppercase tracking-widest text-gray-300">No issues detected</span>;
+                            return <span className="text-[10px] font-black uppercase tracking-widest text-gray-300">{t('admin.noIssues')}</span>;
                           })()}
                         </td>
                         <td className="px-8 py-6 text-right">
@@ -313,7 +327,7 @@ const AdminDashboardPage = () => {
                                       ? 'text-gray-200 cursor-not-allowed' 
                                       : 'text-gray-400 hover:text-green-600 hover:bg-green-50'
                                   }`}
-                                  title={checkConflicts(event).blocking.length > 0 ? "Cannot approve: scheduling conflict" : "Approve & Publish"}
+                                  title={checkConflicts(event).blocking.length > 0 ? t('admin.cannotApprove') : t('admin.approvePublish')}
                                 >
                                   <CheckCircle className="w-5 h-5" />
                                 </button>
@@ -321,7 +335,7 @@ const AdminDashboardPage = () => {
                                   onClick={() => handleStatusUpdate(event.id, 'rejected')}
                                   disabled={actionLoading}
                                   className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
-                                  title="Reject Event"
+                                  title={t('admin.rejectEvent')}
                                 >
                                   <XCircle className="w-5 h-5" />
                                 </button>
@@ -333,7 +347,7 @@ const AdminDashboardPage = () => {
                                 onClick={() => handleStatusUpdate(event.id, 'cancelled')}
                                 disabled={actionLoading}
                                 className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
-                                title="Cancel Event"
+                                title={t('admin.cancelEvent')}
                               >
                                 <XCircle className="w-5 h-5" />
                               </button>
@@ -348,7 +362,7 @@ const AdminDashboardPage = () => {
                                     ? 'text-gray-200 cursor-not-allowed' 
                                     : 'text-gray-400 hover:text-green-600 hover:bg-green-50'
                                 }`}
-                                title={checkConflicts(event).blocking.length > 0 ? "Cannot restore: scheduling conflict" : "Approve / Restore"}
+                                title={checkConflicts(event).blocking.length > 0 ? t('admin.cannotRestore') : t('admin.approveRestore')}
                               >
                                 <CheckCircle className="w-5 h-5" />
                               </button>
@@ -365,13 +379,13 @@ const AdminDashboardPage = () => {
         </SectionCard>
 
         {/* Organizers List (moved to bottom as secondary info) */}
-        <SectionCard title="Registered Organizers" className="!p-0 h-fit">
+        <SectionCard title={t('admin.registeredOrganizers')} className="!p-0 h-fit">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50/50 text-left border-b border-gray-50">
-                  <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400">Name</th>
-                  <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400">Email</th>
+                  <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400">{t('admin.colName')}</th>
+                  <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400">{t('admin.colEmail')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">

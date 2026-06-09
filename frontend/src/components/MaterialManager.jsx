@@ -5,8 +5,10 @@ import ErrorMessage from './ErrorMessage';
 import Button from './Button';
 import InputField from './InputField';
 import { FileText, Plus, Trash2, ExternalLink } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const MaterialManager = ({ eventId }) => {
+  const { t } = useLanguage();
   const [materials, setMaterials] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -63,7 +65,7 @@ const MaterialManager = ({ eventId }) => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this material?')) return;
+    if (!window.confirm(t('materials.deleteConfirm'))) return;
     try {
       await deleteMaterial(id);
       setMaterials(prev => prev.filter(m => m.id !== id));
@@ -80,27 +82,27 @@ const MaterialManager = ({ eventId }) => {
 
       {/* Upload Form */}
       <div className="bg-gray-50 p-6 rounded-xl border border-gray-100">
-        <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-4">Add New Material</h4>
+        <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-4">{t('materials.addNew')}</h4>
         <form onSubmit={handleUpload} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
           <InputField
-            label="File Name"
+            label={t('materials.fileName')}
             value={fileName}
             onChange={(e) => setFileName(e.target.value)}
-            placeholder="e.g. Course Slides"
+            placeholder={t('materials.fileNamePlaceholder')}
             className="!mb-0"
             required
           />
           <InputField
-            label="File URL"
+            label={t('materials.fileUrl')}
             value={fileUrl}
             onChange={(e) => setFileUrl(e.target.value)}
-            placeholder="https://example.com/file.pdf"
+            placeholder={t('materials.fileUrlPlaceholder')}
             className="!mb-0"
             required
           />
           <div className="md:col-span-2 flex justify-end">
             <Button type="submit" isLoading={uploading} disabled={!fileName || !fileUrl}>
-              <Plus className="w-4 h-4 mr-2" /> Add Material
+              <Plus className="w-4 h-4 mr-2" /> {t('materials.addMaterial')}
             </Button>
           </div>
         </form>
@@ -109,7 +111,7 @@ const MaterialManager = ({ eventId }) => {
       {/* Materials List */}
       <div className="space-y-3">
         {materials.length === 0 ? (
-          <div className="text-center py-8 text-gray-400 italic">No materials uploaded yet.</div>
+          <div className="text-center py-8 text-gray-400 italic">{t('materials.noMaterials')}</div>
         ) : (
           materials.map((mat) => (
             <div key={mat.id} className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-xl hover:shadow-sm transition-shadow">
