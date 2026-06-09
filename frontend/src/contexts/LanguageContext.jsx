@@ -1,16 +1,19 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { translations } from '../utils/translations';
 
-const LanguageContext = createContext();
+const LanguageContext = createContext(null);
 
 export const LanguageProvider = ({ children }) => {
-  const [language, setLanguage] = useState(() => {
-    return localStorage.getItem('unievents_lang') || 'en';
+  const [language, setLanguageState] = useState(() => {
+    const saved = localStorage.getItem('unievents_lang');
+    return saved === 'ro' || saved === 'en' ? saved : 'en';
   });
 
-  useEffect(() => {
-    localStorage.setItem('unievents_lang', language);
-  }, [language]);
+  const setLanguage = (nextLanguage) => {
+    const safeLanguage = nextLanguage === 'ro' ? 'ro' : 'en';
+    setLanguageState(safeLanguage);
+    localStorage.setItem('unievents_lang', safeLanguage);
+  };
 
   const t = (key, fallback = '') => {
     const keys = key.split('.');
@@ -22,11 +25,27 @@ export const LanguageProvider = ({ children }) => {
     return val !== undefined ? val : (fallback || key);
   };
 
+  const value = {
+    language,
+    setLanguage,
+    t
+  };
+
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider value={value}>
       {children}
     </LanguageContext.Provider>
   );
 };
 
-export const useLanguage = () => useContext(LanguageContext);
+export const useLanguage = () => {
+  const context = useContext(LanguageContext);
+  if (!context) {
+    return {
+      language: 'en',
+      setLanguage: () => {},
+      t: (key, fallback) => fallback || key
+    };
+  }
+  return context;
+};

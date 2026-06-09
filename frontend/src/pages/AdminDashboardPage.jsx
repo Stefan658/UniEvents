@@ -19,7 +19,9 @@ import {
   CheckCircle, 
   XCircle, 
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -32,6 +34,7 @@ const AdminDashboardPage = () => {
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('pending');
   const [actionLoading, setActionLoading] = useState(false);
+  const [expandedOrganizerId, setExpandedOrganizerId] = useState(null);
 
   const fetchAdminData = async () => {
     try {
@@ -65,6 +68,10 @@ const AdminDashboardPage = () => {
   useEffect(() => {
     fetchAdminData();
   }, []);
+
+  const toggleOrganizerExpansion = (id) => {
+    setExpandedOrganizerId(expandedOrganizerId === id ? null : id);
+  };
 
   const handleStatusUpdate = async (id, status) => {
     // Keep internal status names logic but visually translate if needed
@@ -386,19 +393,127 @@ const AdminDashboardPage = () => {
                 <tr className="bg-gray-50/50 text-left border-b border-gray-50">
                   <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400">{t('admin.colName')}</th>
                   <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400">{t('admin.colEmail')}</th>
+                  <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-gray-400 text-right">{t('admin.colActions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {organizers.map((organizer) => (
-                  <tr key={organizer.id} className="hover:bg-gray-50/30 transition-colors">
-                    <td className="px-8 py-5">
-                      <p className="font-bold text-gray-900">{organizer.full_name || `${organizer.first_name} ${organizer.last_name}`}</p>
-                    </td>
-                    <td className="px-8 py-5">
-                      <p className="text-sm font-medium text-gray-500">{organizer.email}</p>
-                    </td>
-                  </tr>
-                ))}
+                {organizers.map((organizer) => {
+                  const isExpanded = expandedOrganizerId === organizer.id;
+                  const organizerEvents = events.filter(e => e.organizer_id === organizer.id);
+                  const totalOrgEvents = organizerEvents.length;
+                  const publishedOrgEvents = organizerEvents.filter(e => e.status === 'published' || e.status === 'active').length;
+                  const pendingOrgEvents = organizerEvents.filter(e => e.status === 'pending').length;
+                  const rejectedOrgEvents = organizerEvents.filter(e => e.status === 'rejected').length;
+                  const cancelledOrgEvents = organizerEvents.filter(e => e.status === 'cancelled').length;
+                  const totalOrgRegistrations = organizerEvents.reduce((acc, e) => acc + (participantCounts[e.id] || 0), 0);
+
+                  return (
+                    <React.Fragment key={organizer.id}>
+                      <tr className={`transition-colors ${isExpanded ? 'bg-primary-50/30' : 'hover:bg-gray-50/30'}`}>
+                        <td className="px-8 py-5">
+                          <p className="font-bold text-gray-900">{organizer.full_name || `${organizer.first_name} ${organizer.last_name}`}</p>
+                        </td>
+                        <td className="px-8 py-5">
+                          <p className="text-sm font-medium text-gray-500">{organizer.email}</p>
+                        </td>
+                        <td className="px-8 py-5 text-right">
+                          <button 
+                            onClick={() => toggleOrganizerExpansion(organizer.id)}
+                            className={`inline-flex items-center px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                              isExpanded 
+                                ? 'bg-primary-600 text-white shadow-md shadow-primary-200' 
+                                : 'text-primary-600 hover:bg-primary-50'
+                            }`}
+                          >
+                            {isExpanded ? t('admin.showLess') : t('admin.showMore')}
+                            {isExpanded ? <ChevronUp className="w-3.5 h-3.5 ml-2" /> : <ChevronDown className="w-3.5 h-3.5 ml-2" />}
+                          </button>
+                        </td>
+                      </tr>
+                      {isExpanded && (
+                        <tr>
+                          <td colSpan="3" className="px-8 py-8 bg-gray-50/30">
+                            <div className="space-y-8">
+                              <div>
+                                <div className="flex items-center justify-between mb-6">
+                                  <div>
+                                    <h3 className="text-lg font-black text-gray-900 tracking-tight">{t('admin.organizerInsights')}</h3>
+                                    <p className="text-xs font-bold text-gray-500">{t('admin.organizerActivity')} - {organizer.full_name}</p>
+                                  </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+                                  {[
+                                    { label: t('admin.totalEvents'), value: totalOrgEvents, color: 'gray' },
+                                    { label: t('admin.publishedEvents'), value: publishedOrgEvents, color: 'green' },
+                                    { label: t('admin.pendingEvents'), value: pendingOrgEvents, color: 'amber' },
+                                    { label: t('admin.rejectedEvents'), value: rejectedOrgEvents, color: 'red' },
+                                    { label: t('admin.cancelledEvents'), value: cancelledOrgEvents, color: 'rose' },
+                                    { label: t('admin.totalRegistrations'), value: totalOrgRegistrations, color: 'primary' }
+                                  ].map((stat, idx) => (
+                                    <div key={idx} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+                                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">{stat.label}</p>
+                                      <p className={`text-xl font-black tracking-tighter text-${stat.color === 'primary' ? 'primary-600' : stat.color + '-600'}`}>{stat.value}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+
+                              <div>
+                                <h4 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-4">{t('admin.organizerEvents')}</h4>
+                                {organizerEvents.length === 0 ? (
+                                  <p className="text-sm font-bold text-gray-400 py-4 italic">{t('admin.noOrganizerEvents')}</p>
+                                ) : (
+                                  <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                                    <table className="w-full text-left">
+                                      <thead>
+                                        <tr className="bg-gray-50/50 border-b border-gray-50">
+                                          <th className="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400">{t('admin.colEventOrg')}</th>
+                                          <th className="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400">{t('admin.colDateLoc')}</th>
+                                          <th className="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400">{t('admin.registrations')}</th>
+                                          <th className="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400 text-right">{t('admin.colActions')}</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody className="divide-y divide-gray-50">
+                                        {organizerEvents.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).map(event => {
+                                          const displayEvent = localizeEvent(event, language);
+                                          return (
+                                            <tr key={event.id} className="hover:bg-gray-50/50 transition-colors">
+                                              <td className="px-6 py-4">
+                                                <p className="text-xs font-bold text-gray-900">{displayEvent.title}</p>
+                                                <p className="text-[10px] font-black uppercase text-primary-600">{event.category_name}</p>
+                                              </td>
+                                              <td className="px-6 py-4">
+                                                <p className="text-[10px] font-bold text-gray-600">{formatDate(event.start_at)}</p>
+                                                <p className="text-[10px] font-medium text-gray-400">{event.location}</p>
+                                              </td>
+                                              <td className="px-6 py-4">
+                                                <span className="text-xs font-black text-gray-900">{participantCounts[event.id] || 0}</span>
+                                              </td>
+                                              <td className="px-6 py-4 text-right">
+                                                <Link 
+                                                  to={`/events/${event.id}`} 
+                                                  target="_blank"
+                                                  className="text-[10px] font-black uppercase tracking-widest text-primary-600 hover:underline"
+                                                >
+                                                  {t('admin.viewEvent')}
+                                                </Link>
+                                              </td>
+                                            </tr>
+                                          );
+                                        })}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>

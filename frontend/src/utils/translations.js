@@ -404,7 +404,23 @@ export const translations = {
       statusFailed: "Failed to update status: ",
       dateTbd: "TBD",
       invalidDate: "Invalid Date",
-      invalidDateRange: "Invalid Date Range"
+      invalidDateRange: "Invalid Date Range",
+      showMore: "Show More",
+      showLess: "Show Less",
+      organizerInsights: "Organizer Insights",
+      organizerActivity: "Organizer Activity",
+      totalEvents: "Total Events",
+      publishedEvents: "Published",
+      pendingEvents: "Pending",
+      rejectedEvents: "Rejected",
+      cancelledEvents: "Cancelled",
+      totalRegistrations: "Total Registrations",
+      organizerEvents: "Organizer's Events",
+      noOrganizerEvents: "This organizer has no events yet.",
+      viewEvent: "View Details",
+      registrations: "Registrations",
+      name: "Name",
+      email: "Email"
     }
   },
   ro: {
@@ -812,7 +828,23 @@ export const translations = {
       statusFailed: "Eroare la actualizarea statusului: ",
       dateTbd: "TBD",
       invalidDate: "Dată Invalidă",
-      invalidDateRange: "Interval Invalid"
+      invalidDateRange: "Interval Invalid",
+      showMore: "Afișează mai mult",
+      showLess: "Afișează mai puțin",
+      organizerInsights: "Detalii organizator",
+      organizerActivity: "Activitate organizator",
+      totalEvents: "Total evenimente",
+      publishedEvents: "Publicate",
+      pendingEvents: "În așteptare",
+      rejectedEvents: "Respinse",
+      cancelledEvents: "Anulate",
+      totalRegistrations: "Total înscrieri",
+      organizerEvents: "Evenimentele organizatorului",
+      noOrganizerEvents: "Acest organizator nu are evenimente încă.",
+      viewEvent: "Vezi detalii",
+      registrations: "Înscrieri",
+      name: "Nume",
+      email: "Email"
     }
   }
 };
