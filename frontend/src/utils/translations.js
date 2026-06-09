@@ -420,7 +420,16 @@ export const translations = {
       viewEvent: "View Details",
       registrations: "Registrations",
       name: "Name",
-      email: "Email"
+      email: "Email",
+      averageRating: "Average Rating",
+      noRatingsYet: "No ratings yet",
+      totalFeedback: "Total Feedback",
+      eventRating: "Event Rating",
+      sortBy: "Sort by",
+      sortDefault: "Default",
+      sortBestRating: "Best Rating",
+      sortMostRegistrations: "Most Registrations",
+      sortMostEvents: "Most Events"
     }
   },
   ro: {
@@ -844,7 +853,16 @@ export const translations = {
       viewEvent: "Vezi detalii",
       registrations: "Înscrieri",
       name: "Nume",
-      email: "Email"
+      email: "Email",
+      averageRating: "Rating mediu",
+      noRatingsYet: "Nu există evaluări încă",
+      totalFeedback: "Total feedback",
+      eventRating: "Rating eveniment",
+      sortBy: "Sortează după",
+      sortDefault: "Implicit",
+      sortBestRating: "Cel mai bun rating",
+      sortMostRegistrations: "Cele mai multe înscrieri",
+      sortMostEvents: "Cele mai multe evenimente"
     }
   }
 };

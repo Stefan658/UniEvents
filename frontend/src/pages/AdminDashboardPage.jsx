@@ -7,6 +7,7 @@ import Button from '../components/Button';
 import { getAllEvents, updateEventStatus } from '../api/events';
 import { getOrganizers } from '../api/users';
 import { getEventRegistrations } from '../api/registrations';
+import { getFeedbackByEventReport } from '../api/reports';
 import { useLanguage } from '../contexts/LanguageContext';
 import { localizeEvent } from '../utils/localizeEvent';
 import { 
@@ -21,7 +22,8 @@ import {
   Clock,
   AlertTriangle,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Star
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -30,34 +32,59 @@ const AdminDashboardPage = () => {
   const [events, setEvents] = useState([]);
   const [organizers, setOrganizers] = useState([]);
   const [participantCounts, setParticipantCounts] = useState({});
+  const [feedbackReport, setFeedbackReport] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('pending');
   const [actionLoading, setActionLoading] = useState(false);
   const [expandedOrganizerId, setExpandedOrganizerId] = useState(null);
+  const [organizerSortMode, setOrganizerSortMode] = useState('default');
 
   const fetchAdminData = async () => {
     try {
       setLoading(true);
-      const [allEvents, allOrganizers] = await Promise.all([
+      const [allEvents, allOrganizers, feedbackData] = await Promise.allSettled([
         getAllEvents(),
-        getOrganizers()
+        getOrganizers(),
+        getFeedbackByEventReport()
       ]);
       
-      setEvents(allEvents);
-      setOrganizers(allOrganizers);
+      if (allEvents.status === 'fulfilled') setEvents(allEvents.value);
+      if (allOrganizers.status === 'fulfilled') setOrganizers(allOrganizers.value);
+      
+      // Normalize feedback data into a map for O(1) lookup
+      if (feedbackData.status === 'fulfilled') {
+        const fbMap = {};
+        feedbackData.value.forEach(item => {
+          const rawRating = item.average_rating ?? item.averageRating;
+          const rawCount = item.total_feedbacks ?? item.total_feedback ?? 0;
+          
+          const avg = Number(rawRating);
+          const count = Number(rawCount);
+
+          fbMap[item.event_id || item.id] = {
+            averageRating: (Number.isFinite(avg) && count > 0) ? avg : null,
+            totalFeedbacks: Number.isFinite(count) ? count : 0
+          };
+        });
+        setFeedbackReport(fbMap);
+      } else {
+        console.warn('Feedback report fetch failed:', feedbackData.reason);
+      }
 
       // Fetch participant counts for each event
-      const counts = {};
-      await Promise.all(allEvents.map(async (event) => {
-        try {
-          const registrations = await getEventRegistrations(event.id);
-          counts[event.id] = Array.isArray(registrations) ? registrations.length : 0;
-        } catch (err) {
-          counts[event.id] = 0;
-        }
-      }));
-      setParticipantCounts(counts);
+      if (allEvents.status === 'fulfilled') {
+        const counts = {};
+        await Promise.all(allEvents.value.map(async (event) => {
+          try {
+            const registrations = await getEventRegistrations(event.id);
+            counts[event.id] = Array.isArray(registrations) ? registrations.length : 0;
+          } catch (err) {
+            counts[event.id] = 0;
+          }
+        }));
+        setParticipantCounts(counts);
+      }
     } catch (err) {
       setError(err);
     } finally {
@@ -68,6 +95,11 @@ const AdminDashboardPage = () => {
   useEffect(() => {
     fetchAdminData();
   }, []);
+
+  const formatRating = (rating, decimals = 1) => {
+    const value = Number(rating);
+    return Number.isFinite(value) ? value.toFixed(decimals) : null;
+  };
 
   const toggleOrganizerExpansion = (id) => {
     setExpandedOrganizerId(expandedOrganizerId === id ? null : id);
@@ -123,6 +155,59 @@ const AdminDashboardPage = () => {
   const totalEvents = events.length;
   const totalOrganizers = organizers.length;
   const totalRegistrations = Object.values(participantCounts).reduce((acc, count) => acc + count, 0);
+
+  // Process organizers with stats for sorting and insights
+  const processedOrganizers = organizers.map(org => {
+    const orgEvents = events.filter(e => e.organizer_id === org.id);
+    const totalRegs = orgEvents.reduce((acc, e) => acc + (participantCounts[e.id] || 0), 0);
+    
+    // Rating aggregation
+    let totalFeedback = 0;
+    let weightedSum = 0;
+    
+    orgEvents.forEach(e => {
+      const stats = feedbackReport[e.id];
+      const avg = Number(stats?.averageRating);
+      const count = Number(stats?.totalFeedbacks || 0);
+
+      if (Number.isFinite(avg) && count > 0) {
+        totalFeedback += count;
+        weightedSum += (avg * count);
+      }
+    });
+
+    return {
+      ...org,
+      stats: {
+        totalEvents: orgEvents.length,
+        published: orgEvents.filter(e => e.status === 'published' || e.status === 'active').length,
+        pending: orgEvents.filter(e => e.status === 'pending').length,
+        rejected: orgEvents.filter(e => e.status === 'rejected').length,
+        cancelled: orgEvents.filter(e => e.status === 'cancelled').length,
+        totalRegistrations: totalRegs,
+        totalFeedback,
+        averageRating: totalFeedback > 0 ? weightedSum / totalFeedback : null
+      },
+      events: orgEvents
+    };
+  });
+
+  const sortedOrganizers = [...processedOrganizers].sort((a, b) => {
+    if (organizerSortMode === 'rating') {
+      const ratingA = a.stats.averageRating;
+      const ratingB = b.stats.averageRating;
+      if (ratingA === null) return 1;
+      if (ratingB === null) return -1;
+      return ratingB - ratingA;
+    }
+    if (organizerSortMode === 'registrations') {
+      return b.stats.totalRegistrations - a.stats.totalRegistrations;
+    }
+    if (organizerSortMode === 'events') {
+      return b.stats.totalEvents - a.stats.totalEvents;
+    }
+    return 0; // Default: preserve original order
+  });
 
   const isSameDay = (date1, date2) => {
     if (!date1 || !date2) return true;
@@ -386,7 +471,35 @@ const AdminDashboardPage = () => {
         </SectionCard>
 
         {/* Organizers List (moved to bottom as secondary info) */}
-        <SectionCard title={t('admin.registeredOrganizers')} className="!p-0 h-fit">
+        <SectionCard 
+          title={
+            <div className="flex flex-wrap items-center justify-between gap-4 w-full">
+              <span>{t('admin.registeredOrganizers')}</span>
+              <div className="flex items-center space-x-3 bg-white p-1 rounded-xl border border-gray-100 shadow-sm">
+                <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">{t('admin.sortBy')}:</span>
+                {[
+                  { id: 'default', label: t('admin.sortDefault') },
+                  { id: 'rating', label: t('admin.sortBestRating') },
+                  { id: 'registrations', label: t('admin.sortMostRegistrations') },
+                  { id: 'events', label: t('admin.sortMostEvents') }
+                ].map(mode => (
+                  <button
+                    key={mode.id}
+                    onClick={() => setOrganizerSortMode(mode.id)}
+                    className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                      organizerSortMode === mode.id 
+                        ? 'bg-primary-600 text-white shadow-md shadow-primary-200' 
+                        : 'text-gray-400 hover:text-primary-600'
+                    }`}
+                  >
+                    {mode.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          } 
+          className="!p-0 h-fit"
+        >
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -397,21 +510,20 @@ const AdminDashboardPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {organizers.map((organizer) => {
+                {sortedOrganizers.map((organizer) => {
                   const isExpanded = expandedOrganizerId === organizer.id;
-                  const organizerEvents = events.filter(e => e.organizer_id === organizer.id);
-                  const totalOrgEvents = organizerEvents.length;
-                  const publishedOrgEvents = organizerEvents.filter(e => e.status === 'published' || e.status === 'active').length;
-                  const pendingOrgEvents = organizerEvents.filter(e => e.status === 'pending').length;
-                  const rejectedOrgEvents = organizerEvents.filter(e => e.status === 'rejected').length;
-                  const cancelledOrgEvents = organizerEvents.filter(e => e.status === 'cancelled').length;
-                  const totalOrgRegistrations = organizerEvents.reduce((acc, e) => acc + (participantCounts[e.id] || 0), 0);
-
+                  
                   return (
                     <React.Fragment key={organizer.id}>
                       <tr className={`transition-colors ${isExpanded ? 'bg-primary-50/30' : 'hover:bg-gray-50/30'}`}>
                         <td className="px-8 py-5">
                           <p className="font-bold text-gray-900">{organizer.full_name || `${organizer.first_name} ${organizer.last_name}`}</p>
+                          {organizer.stats.averageRating !== null && (
+                            <div className="flex items-center text-[10px] font-black text-amber-500 uppercase tracking-widest">
+                              <Star className="w-2.5 h-2.5 mr-1 fill-current" />
+                              {formatRating(organizer.stats.averageRating)}
+                            </div>
+                          )}
                         </td>
                         <td className="px-8 py-5">
                           <p className="text-sm font-medium text-gray-500">{organizer.email}</p>
@@ -442,18 +554,26 @@ const AdminDashboardPage = () => {
                                   </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+                                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
                                   {[
-                                    { label: t('admin.totalEvents'), value: totalOrgEvents, color: 'gray' },
-                                    { label: t('admin.publishedEvents'), value: publishedOrgEvents, color: 'green' },
-                                    { label: t('admin.pendingEvents'), value: pendingOrgEvents, color: 'amber' },
-                                    { label: t('admin.rejectedEvents'), value: rejectedOrgEvents, color: 'red' },
-                                    { label: t('admin.cancelledEvents'), value: cancelledOrgEvents, color: 'rose' },
-                                    { label: t('admin.totalRegistrations'), value: totalOrgRegistrations, color: 'primary' }
+                                    { label: t('admin.totalEvents'), value: organizer.stats.totalEvents, color: 'gray' },
+                                    { label: t('admin.publishedEvents'), value: organizer.stats.published, color: 'green' },
+                                    { label: t('admin.pendingEvents'), value: organizer.stats.pending, color: 'amber' },
+                                    { label: t('admin.rejectedEvents'), value: organizer.stats.rejected, color: 'red' },
+                                    { label: t('admin.cancelledEvents'), value: organizer.stats.cancelled, color: 'rose' },
+                                    { label: t('admin.totalRegistrations'), value: organizer.stats.totalRegistrations, color: 'primary' },
+                                    { 
+                                      label: t('admin.averageRating'), 
+                                      value: formatRating(organizer.stats.averageRating, 2) ? `${formatRating(organizer.stats.averageRating, 2)} ★` : t('admin.noRatingsYet'), 
+                                      color: 'amber' 
+                                    },
+                                    { label: t('admin.totalFeedback'), value: organizer.stats.totalFeedback, color: 'blue' }
                                   ].map((stat, idx) => (
                                     <div key={idx} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-                                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">{stat.label}</p>
-                                      <p className={`text-xl font-black tracking-tighter text-${stat.color === 'primary' ? 'primary-600' : stat.color + '-600'}`}>{stat.value}</p>
+                                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 leading-tight">{stat.label}</p>
+                                      <p className={`text-xl font-black tracking-tighter text-${stat.color === 'primary' ? 'primary-600' : stat.color + '-600'}`}>
+                                        {stat.value}
+                                      </p>
                                     </div>
                                   ))}
                                 </div>
@@ -461,7 +581,7 @@ const AdminDashboardPage = () => {
 
                               <div>
                                 <h4 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-4">{t('admin.organizerEvents')}</h4>
-                                {organizerEvents.length === 0 ? (
+                                {organizer.events.length === 0 ? (
                                   <p className="text-sm font-bold text-gray-400 py-4 italic">{t('admin.noOrganizerEvents')}</p>
                                 ) : (
                                   <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
@@ -471,12 +591,17 @@ const AdminDashboardPage = () => {
                                           <th className="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400">{t('admin.colEventOrg')}</th>
                                           <th className="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400">{t('admin.colDateLoc')}</th>
                                           <th className="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400">{t('admin.registrations')}</th>
+                                          <th className="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400">{t('admin.eventRating')}</th>
                                           <th className="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400 text-right">{t('admin.colActions')}</th>
                                         </tr>
                                       </thead>
                                       <tbody className="divide-y divide-gray-50">
-                                        {organizerEvents.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).map(event => {
+                                        {[...organizer.events].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).map(event => {
                                           const displayEvent = localizeEvent(event, language);
+                                          const eventStats = feedbackReport[event.id];
+                                          const ratingValue = formatRating(eventStats?.averageRating);
+                                          const feedbackCount = Number(eventStats?.totalFeedbacks || 0);
+
                                           return (
                                             <tr key={event.id} className="hover:bg-gray-50/50 transition-colors">
                                               <td className="px-6 py-4">
@@ -489,6 +614,17 @@ const AdminDashboardPage = () => {
                                               </td>
                                               <td className="px-6 py-4">
                                                 <span className="text-xs font-black text-gray-900">{participantCounts[event.id] || 0}</span>
+                                              </td>
+                                              <td className="px-6 py-4">
+                                                {ratingValue && feedbackCount > 0 ? (
+                                                  <div className="flex items-center text-xs font-black text-amber-500">
+                                                    <Star className="w-3 h-3 mr-1 fill-current" />
+                                                    {ratingValue}
+                                                    <span className="text-[10px] text-gray-400 ml-1">({feedbackCount})</span>
+                                                  </div>
+                                                ) : (
+                                                  <span className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">{t('admin.noRatingsYet')}</span>
+                                                )}
                                               </td>
                                               <td className="px-6 py-4 text-right">
                                                 <Link 
