@@ -7,6 +7,7 @@ import Button from './Button';
 import { logoutUser } from '../api/auth';
 import { getAllEvents } from '../api/events';
 import logo from '../assets/unievents-logo-small-no_bg.png';
+import NotificationBell from './NotificationBell';
 
 const Navbar = () => {
   const { user, logout, isAuthenticated, role } = useAuth();
@@ -241,6 +242,11 @@ const Navbar = () => {
                 RO
               </button>
             </div>
+
+            {/* Notification Bell (Students Only) */}
+            {isAuthenticated && role === 'student' && (
+              <NotificationBell user={user} />
+            )}
 
             {isAuthenticated ? (
               <div className="flex items-center space-x-3">

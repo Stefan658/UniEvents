@@ -180,6 +180,22 @@ export const translations = {
       promptFree: "Show me free events",
       promptToday: "What events are today?"
     },
+    notifications: {
+      title: "Notifications",
+      empty: "No new notifications.",
+      markAllRead: "Mark all as read",
+      unread: "Unread",
+      viewEvent: "View event",
+      loading: "Loading notifications...",
+      error: "Could not load notifications.",
+      types: {
+        event_today: "Event today: {event}",
+        event_tomorrow: "Event tomorrow: {event}",
+        waitlisted: "You are on the waitlist for {event}",
+        cancelled: "Event cancelled: {event}",
+        feedback_missing: "Leave feedback for {event}"
+      }
+    },
     status: {
       published: "Published",
       draft: "Draft",
@@ -201,6 +217,39 @@ export const translations = {
       badgesTitle: "Your Badges & Rewards",
       earned: "Earned",
       locked: "Locked",
+      progress: "Progress",
+      badges: {
+        campus_active: {
+          title: "Campus Active",
+          description: "Join at least 3 university events.",
+          reward: "Eligible for campus recognition"
+        },
+        feedback_contributor: {
+          title: "Feedback Contributor",
+          description: "Leave feedback for an event you attended.",
+          reward: "Feedback contributor badge"
+        },
+        career_starter: {
+          title: "Career Starter",
+          description: "Attend a Career-related event.",
+          reward: "Career readiness recognition"
+        },
+        volunteer_spirit: {
+          title: "Volunteer Spirit",
+          description: "Join a volunteering event to help the community.",
+          reward: "Social involvement certificate eligibility"
+        },
+        sports_participant: {
+          title: "Sports Participant",
+          description: "Participate in a campus sports event.",
+          reward: "Campus sport recognition"
+        },
+        tech_explorer: {
+          title: "Tech Explorer",
+          description: "Attend at least 2 Workshops or Conferences.",
+          reward: "Tech community recognition"
+        }
+      },
       waitlistedTitle: "Waitlisted Events",
       upcomingTitle: "Upcoming Participations",
       cancelledTitle: "Cancelled Events",
@@ -539,6 +588,22 @@ export const translations = {
       promptFree: "Arată-mi evenimente gratuite",
       promptToday: "Ce evenimente sunt azi?"
     },
+    notifications: {
+      title: "Notifications",
+      empty: "No new notifications.",
+      markAllRead: "Mark all as read",
+      unread: "Unread",
+      viewEvent: "View event",
+      loading: "Loading notifications...",
+      error: "Could not load notifications.",
+      types: {
+        event_today: "Event today: {event}",
+        event_tomorrow: "Event tomorrow: {event}",
+        waitlisted: "You are on the waitlist for {event}",
+        cancelled: "Event cancelled: {event}",
+        feedback_missing: "Leave feedback for {event}"
+      }
+    },
     status: {
       published: "Publicat",
       draft: "Ciornă",
@@ -560,6 +625,39 @@ export const translations = {
       badgesTitle: "Badge-urile și Recompensele Tale",
       earned: "Obținut",
       locked: "Blocat",
+      progress: "Progres",
+      badges: {
+        campus_active: {
+          title: "Activ în Campus",
+          description: "Participă la cel puțin 3 evenimente universitare.",
+          reward: "Eligibil pentru recunoaștere în campus"
+        },
+        feedback_contributor: {
+          title: "Contributor prin Feedback",
+          description: "Lasă feedback pentru un eveniment la care ai participat.",
+          reward: "Badge de contributor prin feedback"
+        },
+        career_starter: {
+          title: "Început de Carieră",
+          description: "Participă la un eveniment legat de carieră.",
+          reward: "Recunoaștere pentru pregătirea în carieră"
+        },
+        volunteer_spirit: {
+          title: "Spirit de Voluntariat",
+          description: "Participă la un eveniment de voluntariat pentru a sprijini comunitatea.",
+          reward: "Eligibil pentru certificat de implicare socială"
+        },
+        sports_participant: {
+          title: "Participant Sportiv",
+          description: "Participă la un eveniment sportiv din campus.",
+          reward: "Recunoaștere pentru activitate sportivă în campus"
+        },
+        tech_explorer: {
+          title: "Explorator Tech",
+          description: "Participă la cel puțin 2 workshop-uri sau conferințe.",
+          reward: "Recunoaștere în comunitatea tech"
+        }
+      },
       waitlistedTitle: "Evenimente pe lista de așteptare",
       upcomingTitle: "Participări Viitoare",
       cancelledTitle: "Evenimente Anulate",

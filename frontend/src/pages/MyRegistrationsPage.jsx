@@ -196,17 +196,17 @@ const MyRegistrationsPage = () => {
                       </div>
                       
                       <h3 className={`text-lg font-black mb-1 ${badge.earned ? 'text-gray-900' : 'text-gray-500'}`}>
-                        {badge.title}
+                        {t(`registrations.badges.${badge.code}.title`)}
                       </h3>
                       <p className="text-sm text-gray-500 font-medium mb-4 leading-relaxed">
-                        {badge.description}
+                        {t(`registrations.badges.${badge.code}.description`)}
                       </p>
-                      
+
                       {badge.earned && badge.reward && (
                         <div className="mt-auto pt-4 border-t border-amber-100/50">
                           <p className="text-xs font-bold text-amber-700 flex items-center">
                             <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-                            {badge.reward}
+                            {t(`registrations.badges.${badge.code}.reward`)}
                           </p>
                         </div>
                       )}
