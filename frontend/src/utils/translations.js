@@ -436,7 +436,9 @@ export const translations = {
       sortDefault: "Default",
       sortBestRating: "Best Rating",
       sortMostRegistrations: "Most Registrations",
-      sortMostEvents: "Most Events"
+      sortMostEvents: "Most Events",
+      expiredPending: "Expired Pending Event",
+      expiredPendingDesc: "This event's date has passed and it can no longer be approved."
     }
   },
   ro: {

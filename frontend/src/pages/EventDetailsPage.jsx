@@ -768,7 +768,21 @@ const EventDetailsPage = () => {
                       {event.status === 'pending' && (
                         <div className="space-y-3">
                           {(() => {
+                            const isExpired = new Date(event.end_at || event.start_at) < new Date();
                             const { warning, blocking } = checkConflicts();
+                            
+                            if (isExpired) {
+                              return (
+                                <div className="mb-4 p-4 rounded-2xl bg-gray-100 border border-gray-200 flex items-start space-x-3">
+                                  <Clock className="w-5 h-5 text-gray-500 shrink-0 mt-0.5" />
+                                  <div>
+                                    <p className="text-xs font-black uppercase tracking-widest text-gray-700 leading-none mb-1">{t('admin.expiredPending')}</p>
+                                    <p className="text-xs font-medium text-gray-500 leading-tight">{t('admin.expiredPendingDesc')}</p>
+                                  </div>
+                                </div>
+                              );
+                            }
+
                             return (
                               <>
                                 {blocking.length > 0 && (
@@ -797,17 +811,17 @@ const EventDetailsPage = () => {
                                 >
                                   <CheckCircle className="w-4 h-4 mr-2" /> {t('eventDetails.approvePublish')}
                                 </Button>
-                                <Button 
-                                  variant="secondary"
-                                  className="w-full !py-3 text-red-600 border-red-100 hover:bg-red-50"
-                                  onClick={() => handleAdminStatusUpdate('rejected')}
-                                  isLoading={actionLoading}
-                                >
-                                  <XCircle className="w-4 h-4 mr-2" /> {t('eventDetails.rejectEvent')}
-                                </Button>
                               </>
                             );
                           })()}
+                          <Button 
+                            variant="secondary"
+                            className="w-full !py-3 text-red-600 border-red-100 hover:bg-red-50"
+                            onClick={() => handleAdminStatusUpdate('rejected')}
+                            isLoading={actionLoading}
+                          >
+                            <XCircle className="w-4 h-4 mr-2" /> {t('eventDetails.rejectEvent')}
+                          </Button>
                         </div>
                       )}
                       <div className="border-b border-gray-100 pt-2"></div>
