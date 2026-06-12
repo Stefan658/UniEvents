@@ -87,6 +87,10 @@ def delete_user_route(user_id):
             return jsonify({"error": "User not found."}), 404
         
         return jsonify({"message": "User deleted successfully."}), 200 # Changed message
+    except ValueError as e:
+        if str(e).startswith("Cannot delete user:"):
+            return jsonify({"error": str(e)}), 409
+        return jsonify({"error": "Invalid input data."}), 400
     except Exception: # Changed message, removed traceback and details
         return jsonify({"error": "An internal server error occurred."}), 500
 

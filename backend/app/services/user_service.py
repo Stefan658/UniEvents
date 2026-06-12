@@ -1,4 +1,5 @@
 from sqlalchemy.orm import joinedload
+from sqlalchemy.exc import IntegrityError
 from backend.app.models.user import User
 from backend.app.models.role import Role
 from backend.app.extensions import db
@@ -150,6 +151,11 @@ def delete_user(user_id):
     if not user_to_delete:
         return False  # Indicate that the user was not found
 
-    db.session.delete(user_to_delete)
-    db.session.commit()
+    try:
+        db.session.delete(user_to_delete)
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        raise ValueError("Cannot delete user: account has active registrations, feedback, or organized events.")
+    
     return True  # Indicate success

@@ -139,15 +139,18 @@ const Navbar = () => {
                 {navLinks.map((link) => (
                   <Link 
                     key={link.path}
-                    to={link.path} 
-                    className={`px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center space-x-2 ${
+                    to={link.path}
+                    title={link.name}
+                    className={`px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-300 flex items-center group ${
                       isActive(link.path) 
                         ? 'bg-primary-50 text-primary-700' 
                         : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
                     }`}
                   >
-                    <link.icon className={`h-4 w-4 ${isActive(link.path) ? 'text-primary-600' : 'text-gray-400'}`} />
-                    <span className="hidden xl:inline">{link.name}</span>
+                    <link.icon className={`h-4 w-4 shrink-0 ${isActive(link.path) ? 'text-primary-600' : 'text-gray-400'}`} />
+                    <span className="max-w-0 overflow-hidden opacity-0 group-hover:max-w-xs group-focus-within:max-w-xs group-hover:opacity-100 group-focus-within:opacity-100 group-hover:ml-2 group-focus-within:ml-2 transition-all duration-300 ease-in-out whitespace-nowrap">
+                      {link.name}
+                    </span>
                   </Link>
                 ))}
                 
@@ -155,11 +158,14 @@ const Navbar = () => {
                   href="https://orar.usv.ro/" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center space-x-2 text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+                  title={t('nav.usvSchedule')}
+                  className="px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-300 flex items-center group text-gray-500 hover:bg-gray-50 hover:text-gray-900"
                 >
-                  <Clock className="h-4 w-4 text-gray-400" />
-                  <span className="hidden xl:inline">{t('nav.usvSchedule')}</span>
-                  <ExternalLink className="h-3 w-3 text-gray-300" />
+                  <Clock className="h-4 w-4 shrink-0 text-gray-400" />
+                  <span className="max-w-0 overflow-hidden opacity-0 group-hover:max-w-xs group-focus-within:max-w-xs group-hover:opacity-100 group-focus-within:opacity-100 group-hover:ml-2 group-focus-within:ml-2 transition-all duration-300 ease-in-out whitespace-nowrap">
+                    {t('nav.usvSchedule')}
+                  </span>
+                  <ExternalLink className="h-3 w-3 ml-1 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 </a>
               </div>
 
