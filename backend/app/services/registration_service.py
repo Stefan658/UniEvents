@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 
@@ -7,6 +8,66 @@ from backend.app.models.registration import Registration
 from backend.app.models.user import User
 from backend.app.models.event import Event
 from backend.app.services import email_service, calendar_service
+
+
+def _promote_next_waitlisted(event_id):
+    """
+    Internal helper to promote the oldest waitlisted user for an event.
+    Promotes only one user if a spot is available.
+    """
+    event = Event.query.get(event_id)
+    if not event or not event.requires_registration or not event.max_participants:
+        return None
+
+    # Do not promote for cancelled/rejected events or past events
+    if event.status in ["cancelled", "rejected"]:
+        return None
+    
+    now = datetime.utcnow()
+    event_end = event.end_at if event.end_at else event.start_at
+    if event_end < now:
+        return None
+
+    # Count current confirmed participants
+    confirmed_count = Registration.query.filter(
+        Registration.event_id == event_id,
+        Registration.status == "confirmed"
+    ).count()
+
+    if confirmed_count >= event.max_participants:
+        return None
+
+    # Find the oldest waitlisted registration (FIFO)
+    next_waitlisted = (
+        Registration.query.filter_by(event_id=event_id, status="waitlisted")
+        .order_by(Registration.registered_at.asc(), Registration.id.asc())
+        .first()
+    )
+
+    if not next_waitlisted:
+        return None
+
+    # Promote the user
+    next_waitlisted.status = "confirmed"
+    if not next_waitlisted.ticket_code:
+        next_waitlisted.ticket_code = str(uuid.uuid4())
+    
+    db.session.commit()
+
+    # Send confirmation email (reusing existing helper)
+    try:
+        ics_content = calendar_service.generate_ics(event)
+        email_service.send_registration_confirmation(
+            next_waitlisted.user, 
+            event, 
+            ics_content=ics_content,
+            ticket_code=next_waitlisted.ticket_code
+        )
+    except Exception:
+        # Promotion is successful even if email fails
+        pass
+
+    return next_waitlisted
 
 
 def create_registration(user_id, event_id):
@@ -107,9 +168,17 @@ def delete_registration(registration_id):
 
     user = registration.user
     event = registration.event
+    
+    # Store needed info for potential promotion
+    old_status = registration.status
+    event_id = registration.event_id
 
     db.session.delete(registration)
     db.session.commit()
+
+    # Trigger auto-promotion if a confirmed spot was opened
+    if old_status == "confirmed":
+        _promote_next_waitlisted(event_id)
 
     # Send cancellation email
     email_status = "skipped"
@@ -147,6 +216,10 @@ def update_registration_status(registration_id, status):
     old_status = registration.status
     registration.status = normalized_status
     db.session.commit()
+
+    # Trigger auto-promotion if a confirmed spot was opened
+    if old_status == "confirmed" and normalized_status != "confirmed":
+        _promote_next_waitlisted(registration.event_id)
 
     # Send cancellation email if it was confirmed and now it's cancelled
     email_status = "skipped"
