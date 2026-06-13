@@ -44,6 +44,47 @@ Aplicația centralizează evenimente universitare și oferă funcționalități 
 - vizualizare organizatori
 - rapoarte agregate despre evenimente, înscrieri și feedback
 
+## Docker Full-Stack Quick Start
+
+This project is fully dockerized for easy deployment and reproduction of the environment.
+
+### Prerequisites
+- Docker and Docker Compose installed.
+
+### 1. Setup Environment
+Copy the example environment file and adjust if necessary:
+```bash
+cp .env.example .env
+```
+*Note: The default values in `.env.example` are pre-configured to work with the Docker Compose setup.*
+
+### 2. Start the Application
+Run the following command to build and start all services (PostgreSQL, Backend, Frontend):
+```bash
+docker compose up --build
+```
+
+### 3. Verify Health
+- **Backend Health:** [http://localhost:5000/api/health](http://localhost:5000/api/health)
+- **Frontend Access:** [http://localhost:3000](http://localhost:3000)
+
+### 4. (Optional) Seed the Database
+To populate the database with demo events, participants, and registrations:
+```bash
+docker compose exec backend python backend/seed.py
+```
+For a more realistic dataset (sourced from USV events):
+```bash
+docker compose exec backend python backend/seed_realistic.py
+docker compose exec backend python backend/seed_realistic_activity.py
+```
+
+### 5. Stop the Application
+```bash
+docker compose down
+```
+**Warning:** Do not use `docker compose down -v` unless you want to permanently delete all data in the database volume.
+
 ## Structura proiectului
 
 ```text
