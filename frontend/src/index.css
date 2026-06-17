@@ -46,3 +46,34 @@
 ::-webkit-scrollbar-thumb {
   @apply bg-gray-300 rounded-full hover:bg-gray-400 transition-colors;
 }
+
+@media print {
+  .no-print, 
+  nav, 
+  footer, 
+  button:not(.print-visible), 
+  .assistant-widget,
+  .notification-bell {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+    padding: 0 !important;
+  }
+
+  .container {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .shadow-soft, .shadow-2xl, .shadow-xl {
+    box-shadow: none !important;
+  }
+
+  .rounded-[2rem], .rounded-[4rem], .rounded-3xl, .rounded-2xl {
+    border-radius: 0 !important;
+  }
+}

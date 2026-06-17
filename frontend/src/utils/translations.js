@@ -63,7 +63,14 @@ export const translations = {
       popularTitle: "Most Awaited Events",
       pastTitle: "Review Attended Events",
       upcomingTitle: "Upcoming Events",
-      seeMore: "See more events"
+      seeMore: "See more events",
+      sortBy: "Sort by",
+      sortDateAsc: "Date: Soonest",
+      sortDateDesc: "Date: Latest",
+      sortTitleAZ: "Title: A-Z",
+      sortTitleZA: "Title: Z-A",
+      sortFreeFirst: "Free Entry First",
+      sortRegFirst: "Registration First"
     },
     eventCard: {
       outsideCampus: "Outside Campus",
@@ -123,6 +130,7 @@ export const translations = {
       eventCancelled: "Event Cancelled",
       cancelledNote: "This event was cancelled due to unforeseen reasons. We apologize for the inconvenience.",
       shareEvent: "Share Event",
+      addToCalendar: "Add to Calendar",
       moderationActions: "Moderation Actions",
       cancelEvent: "Cancel Event",
       approvePublish: "Approve & Publish",
@@ -363,7 +371,8 @@ export const translations = {
       statusHeader: "Status",
       anonymous: "Anonymous Student",
       noEmail: "No email provided",
-      registered: "Registered"
+      registered: "Registered",
+      exportCSV: "Export CSV"
     },
     materials: {
       addNew: "Add New Material",
@@ -438,7 +447,8 @@ export const translations = {
       sortMostRegistrations: "Most Registrations",
       sortMostEvents: "Most Events",
       expiredPending: "Expired Pending Event",
-      expiredPendingDesc: "This event's date has passed and it can no longer be approved."
+      expiredPendingDesc: "This event's date has passed and it can no longer be approved.",
+      printReport: "Print PDF Report"
     }
   },
   ro: {
@@ -505,7 +515,14 @@ export const translations = {
       popularTitle: "Cele mai Așteptate Evenimente",
       pastTitle: "Evaluează Evenimentele la care ai Participat",
       upcomingTitle: "Evenimente Viitoare",
-      seeMore: "Vezi mai multe evenimente"
+      seeMore: "Vezi mai multe evenimente",
+      sortBy: "Sortează după",
+      sortDateAsc: "Dată: Cele mai apropiate",
+      sortDateDesc: "Dată: Cele mai îndepărtate",
+      sortTitleAZ: "Titlu: A-Z",
+      sortTitleZA: "Titlu: Z-A",
+      sortFreeFirst: "Gratuite primele",
+      sortRegFirst: "Cu înscriere primele"
     },
     eventCard: {
       outsideCampus: "În afara Campusului",
@@ -565,6 +582,7 @@ export const translations = {
       eventCancelled: "Eveniment Anulat",
       cancelledNote: "Acest eveniment a fost anulat din motive neprevăzute. Ne cerem scuze pentru inconvenient.",
       shareEvent: "Distribuie Eveniment",
+      addToCalendar: "Adaugă în Calendar",
       moderationActions: "Acțiuni Moderare",
       cancelEvent: "Anulează Eveniment",
       approvePublish: "Aprobă și Publică",
@@ -805,7 +823,8 @@ export const translations = {
       statusHeader: "Status",
       anonymous: "Student Anonim",
       noEmail: "Niciun email furnizat",
-      registered: "Înscris"
+      registered: "Înscris",
+      exportCSV: "Exportă CSV"
     },
     materials: {
       addNew: "Adaugă Material Nou",
@@ -880,7 +899,8 @@ export const translations = {
       sortMostRegistrations: "Cele mai multe înscrieri",
       sortMostEvents: "Cele mai multe evenimente",
       expiredPending: "Eveniment în așteptare expirat",
-      expiredPendingDesc: "Data acestui eveniment a trecut și nu mai poate fi aprobat."
+      expiredPendingDesc: "Data acestui eveniment a trecut și nu mai poate fi aprobat.",
+      printReport: "Printează Raport PDF"
     }
   }
 };

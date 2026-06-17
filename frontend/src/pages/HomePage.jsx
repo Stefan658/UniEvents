@@ -23,6 +23,7 @@ const HomePage = () => {
   const searchQuery = searchParams.get('q') || '';
 
   const [viewMode, setViewMode] = useState('grid');
+  const [sortBy, setSortBy] = useState('date_asc');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filters, setFilters] = useState({
     category: '',
@@ -136,6 +137,34 @@ const HomePage = () => {
     fetchEvents();
   }, [isAuthenticated, role]);
 
+  const sortEvents = (list) => {
+    const sorted = [...list];
+    switch (sortBy) {
+      case 'date_asc':
+        return sorted.sort((a, b) => new Date(a.start_at) - new Date(b.start_at));
+      case 'date_desc':
+        return sorted.sort((a, b) => new Date(b.start_at) - new Date(a.start_at));
+      case 'title_asc':
+        return sorted.sort((a, b) => {
+          const tA = localizeEvent(a, language).title || "";
+          const tB = localizeEvent(b, language).title || "";
+          return tA.localeCompare(tB, language === 'ro' ? 'ro-RO' : 'en-US', { sensitivity: 'base' });
+        });
+      case 'title_desc':
+        return sorted.sort((a, b) => {
+          const tA = localizeEvent(a, language).title || "";
+          const tB = localizeEvent(b, language).title || "";
+          return tB.localeCompare(tA, language === 'ro' ? 'ro-RO' : 'en-US', { sensitivity: 'base' });
+        });
+      case 'free_first':
+        return sorted.sort((a, b) => (a.is_free_entry === b.is_free_entry ? 0 : a.is_free_entry ? -1 : 1));
+      case 'reg_first':
+        return sorted.sort((a, b) => (a.requires_registration === b.requires_registration ? 0 : a.requires_registration ? -1 : 1));
+      default:
+        return sorted;
+    }
+  };
+
   const filterEvents = (eventsList) => {
     let filtered = eventsList;
 
@@ -214,10 +243,10 @@ const HomePage = () => {
     return filtered;
   };
 
-  const filteredUpcoming = useMemo(() => filterEvents(upcomingEvents), [upcomingEvents, searchQuery, filters]);
-  const filteredPopular = useMemo(() => filterEvents(popularEvents), [popularEvents, searchQuery, filters]);
-  const filteredPast = useMemo(() => filterEvents(pastEvents), [pastEvents, searchQuery, filters]);
-  const filteredRecommended = useMemo(() => filterEvents(recommendedEvents), [recommendedEvents, searchQuery, filters]);
+  const filteredUpcoming = useMemo(() => sortEvents(filterEvents(upcomingEvents)), [upcomingEvents, searchQuery, filters, sortBy]);
+  const filteredPopular = useMemo(() => sortEvents(filterEvents(popularEvents)), [popularEvents, searchQuery, filters, sortBy]);
+  const filteredPast = useMemo(() => sortEvents(filterEvents(pastEvents)), [pastEvents, searchQuery, filters, sortBy]);
+  const filteredRecommended = useMemo(() => sortEvents(filterEvents(recommendedEvents)), [recommendedEvents, searchQuery, filters, sortBy]);
 
   return (
     <div className="relative">
@@ -506,29 +535,50 @@ const HomePage = () => {
                 )}
               </div>
 
-              <div className="bg-white/50 backdrop-blur-sm p-1.5 rounded-2xl border border-gray-100 shadow-soft flex gap-1">
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                    viewMode === 'grid'
-                      ? 'bg-primary-600 text-white shadow-md'
-                      : 'text-gray-500 hover:bg-gray-50'
-                  }`}
-                >
-                  <LayoutGrid className="w-4 h-4" />
-                  Grid
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                    viewMode === 'list'
-                      ? 'bg-primary-600 text-white shadow-md'
-                      : 'text-gray-500 hover:bg-gray-50'
-                  }`}
-                >
-                  <List className="w-4 h-4" />
-                  List
-                </button>
+              <div className="flex flex-wrap items-center justify-center gap-4">
+                {/* Sort Dropdown */}
+                <div className="bg-white/50 backdrop-blur-sm p-1.5 rounded-2xl border border-gray-100 shadow-soft flex items-center gap-2">
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2 hidden sm:inline">{t('home.sortBy')}:</span>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="bg-transparent border-none text-sm font-bold text-gray-700 focus:ring-0 cursor-pointer outline-none appearance-none px-2 pr-8"
+                    style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0\' stroke=\'%239CA3AF\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.5rem center', backgroundSize: '1rem' }}
+                  >
+                    <option value="date_asc">{t('home.sortDateAsc')}</option>
+                    <option value="date_desc">{t('home.sortDateDesc')}</option>
+                    <option value="title_asc">{t('home.sortTitleAZ')}</option>
+                    <option value="title_desc">{t('home.sortTitleZA')}</option>
+                    <option value="free_first">{t('home.sortFreeFirst')}</option>
+                    <option value="reg_first">{t('home.sortRegFirst')}</option>
+                  </select>
+                </div>
+
+                {/* View Mode Toggle */}
+                <div className="bg-white/50 backdrop-blur-sm p-1.5 rounded-2xl border border-gray-100 shadow-soft flex gap-1">
+                  <button
+                    onClick={() => setViewMode('grid')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                      viewMode === 'grid'
+                        ? 'bg-primary-600 text-white shadow-md'
+                        : 'text-gray-500 hover:bg-gray-50'
+                    }`}
+                  >
+                    <LayoutGrid className="w-4 h-4" />
+                    Grid
+                  </button>
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                      viewMode === 'list'
+                        ? 'bg-primary-600 text-white shadow-md'
+                        : 'text-gray-500 hover:bg-gray-50'
+                    }`}
+                  >
+                    <List className="w-4 h-4" />
+                    List
+                  </button>
+                </div>
               </div>
             </div>
           )}

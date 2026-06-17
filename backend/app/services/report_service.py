@@ -86,10 +86,38 @@ def get_feedback_by_event_report():
         .all()
     )
 
+    # Simple keyword-based sentiment analysis logic (Requirement A16)
+    positive_words = {'great', 'excellent', 'good', 'amazing', 'love', 'perfect', 'helpful', 'interesting', 'bun', 'excelent', 'super', 'recomand', 'interesant', 'util', 'fain', 'bravo'}
+    negative_words = {'bad', 'poor', 'terrible', 'awful', 'hate', 'waste', 'boring', 'unhelpful', 'prost', 'slab', 'plictisitor', 'nasol', 'inutil', 'rau'}
+
     # Process results to handle None for average_rating and round it
     serialized_report = []
     for row in report_data:
         row_dict = row._asdict()
         row_dict['average_rating'] = round(row_dict['average_rating'], 2) if row_dict['average_rating'] is not None else None
+        
+        # Calculate sentiment for this event
+        comments = db.session.query(Feedback.comment).filter(Feedback.event_id == row_dict['event_id']).all()
+        score = 0
+        has_comments = False
+        for comment_tuple in comments:
+            comment = comment_tuple[0]
+            if not comment: continue
+            has_comments = True
+            words = comment.lower().replace('.', '').replace(',', '').split()
+            for word in words:
+                if word in positive_words: score += 1
+                elif word in negative_words: score -= 1
+        
+        if not has_comments:
+            sentiment = "N/A"
+        elif score > 0:
+            sentiment = "Positive"
+        elif score < 0:
+            sentiment = "Negative"
+        else:
+            sentiment = "Neutral"
+            
+        row_dict['sentiment'] = sentiment
         serialized_report.append(row_dict)
     return serialized_report

@@ -23,7 +23,8 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronUp,
-  Star
+  Star,
+  Printer
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -64,7 +65,8 @@ const AdminDashboardPage = () => {
 
           fbMap[item.event_id || item.id] = {
             averageRating: (Number.isFinite(avg) && count > 0) ? avg : null,
-            totalFeedbacks: Number.isFinite(count) ? count : 0
+            totalFeedbacks: Number.isFinite(count) ? count : 0,
+            sentiment: item.sentiment
           };
         });
         setFeedbackReport(fbMap);
@@ -263,13 +265,23 @@ const AdminDashboardPage = () => {
 
   return (
     <PageContainer>
-      <div className="mb-12">
-        <div className="inline-flex items-center px-3 py-1 rounded-lg bg-primary-50 text-primary-700 text-[10px] font-black uppercase tracking-widest mb-3 border border-primary-100">
-          <Shield className="w-3 h-3 mr-2" />
-          {t('admin.portal')}
+      <div className="mb-12 flex flex-wrap items-center justify-between gap-6">
+        <div>
+          <div className="inline-flex items-center px-3 py-1 rounded-lg bg-primary-50 text-primary-700 text-[10px] font-black uppercase tracking-widest mb-3 border border-primary-100">
+            <Shield className="w-3 h-3 mr-2" />
+            {t('admin.portal')}
+          </div>
+          <h1 className="text-4xl font-semibold font-black text-gray-900 tracking-tighter">{t('admin.title')}</h1>
+          <p className="text-gray-500 font-medium mt-2">{t('admin.subtitle')}</p>
         </div>
-        <h1 className="text-4xl font-semibold font-black text-gray-900 tracking-tighter">{t('admin.title')}</h1>
-        <p className="text-gray-500 font-medium mt-2">{t('admin.subtitle')}</p>
+
+        <button
+          onClick={() => window.print()}
+          className="inline-flex items-center px-6 py-3 bg-white border border-gray-200 rounded-[1.5rem] text-sm font-bold text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm group no-print"
+        >
+          <Printer className="w-4 h-4 mr-2 text-primary-500 group-hover:scale-110 transition-transform" />
+          {t('admin.printReport')}
+        </button>
       </div>
 
       {/* Overview Cards */}
@@ -631,10 +643,20 @@ const AdminDashboardPage = () => {
                                               </td>
                                               <td className="px-6 py-4">
                                                 {ratingValue && feedbackCount > 0 ? (
-                                                  <div className="flex items-center text-xs font-black text-amber-500">
-                                                    <Star className="w-3 h-3 mr-1 fill-current" />
-                                                    {ratingValue}
-                                                    <span className="text-[10px] text-gray-400 ml-1">({feedbackCount})</span>
+                                                  <div className="flex flex-col">
+                                                    <div className="flex items-center text-xs font-black text-amber-500">
+                                                      <Star className="w-3 h-3 mr-1 fill-current" />
+                                                      {ratingValue}
+                                                      <span className="text-[10px] text-gray-400 ml-1">({feedbackCount})</span>
+                                                    </div>
+                                                    {eventStats?.sentiment && eventStats.sentiment !== 'N/A' && (
+                                                      <span className={`text-[9px] font-black uppercase tracking-tighter mt-1 ${
+                                                        eventStats.sentiment === 'Positive' ? 'text-green-500' : 
+                                                        eventStats.sentiment === 'Negative' ? 'text-red-500' : 'text-gray-400'
+                                                      }`}>
+                                                        {eventStats.sentiment}
+                                                      </span>
+                                                    )}
                                                   </div>
                                                 ) : (
                                                   <span className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">{t('admin.noRatingsYet')}</span>

@@ -374,6 +374,11 @@ const EventDetailsPage = () => {
     }
   };
 
+  const handleDownloadICS = () => {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
+    window.open(`${baseUrl}/events/${id}/calendar.ics`, '_blank');
+  };
+
   const isSameDay = (date1, date2) => {
     if (!date1 || !date2) return true;
     const d1 = new Date(date1);
@@ -1023,6 +1028,11 @@ const EventDetailsPage = () => {
                   <Button variant="ghost" className="w-full mt-4" onClick={handleShareEvent}>
                     <Share2 className="w-4 h-4 mr-2" />
                     {t('eventDetails.shareEvent')}
+                  </Button>
+
+                  <Button variant="ghost" className="w-full mt-2" onClick={handleDownloadICS}>
+                    <Calendar className="w-4 h-4 mr-2" />
+                    {t('eventDetails.addToCalendar')}
                   </Button>
                 </>
               )}
