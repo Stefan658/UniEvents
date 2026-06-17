@@ -20,6 +20,7 @@ services:
   backend:
     build: ./backend
     container_name: uni_events_backend
+    restart: always
     env_file: .env
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-uni_events}
@@ -36,6 +37,7 @@ services:
   frontend:
     build: ./frontend
     container_name: uni_events_frontend
+    restart: always
     ports:
       - "3000:80"
     depends_on:
